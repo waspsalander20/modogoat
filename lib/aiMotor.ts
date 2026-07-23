@@ -132,10 +132,12 @@ export interface ConsecuenciaGenerada {
   alertaGenerada: string | null;
 }
 
+// strict:true no soporta minItems/maxItems distintos de 0 o 1 — la cantidad
+// exacta de 4 opciones se refuerza con la instrucción del description y con
+// validarOpciones() en tiempo de ejecución, no con el JSON Schema.
 const OPCIONES_DECISION_SCHEMA = {
   type: "array",
-  minItems: 4,
-  maxItems: 4,
+  description: "Exactamente 4 opciones, una por cada letra A, B, C y D.",
   items: {
     type: "object",
     additionalProperties: false,
@@ -171,8 +173,7 @@ const EVENTO_SCHEMA = {
     texto: { type: "string", description: "2-4 líneas de contexto narrativo antes de las opciones" },
     opciones: {
       type: "array",
-      minItems: 4,
-      maxItems: 4,
+      description: "Exactamente 4 opciones, una por cada letra A, B, C y D.",
       items: {
         type: "object",
         additionalProperties: false,
@@ -214,6 +215,7 @@ async function llamarHerramienta<T>(
         name: toolName,
         description: `Genera el resultado para la acción "${accion}" de Modo GOAT.`,
         input_schema: toolSchema as Anthropic.Tool.InputSchema,
+        strict: true,
       },
     ],
     tool_choice: { type: "tool", name: toolName },
@@ -225,6 +227,18 @@ async function llamarHerramienta<T>(
     throw new Error("El motor de IA no devolvió una respuesta estructurada.");
   }
   return toolUse.input as T;
+}
+
+const LETRAS_VALIDAS = ["A", "B", "C", "D"];
+
+function validarOpciones(opciones: unknown): asserts opciones is Array<{ letra: string }> {
+  const invalido =
+    !Array.isArray(opciones) ||
+    opciones.length !== 4 ||
+    opciones.some((o) => !o || typeof o !== "object" || !LETRAS_VALIDAS.includes((o as { letra?: unknown }).letra as string));
+  if (invalido) {
+    throw new Error("El motor de IA devolvió opciones con un formato inválido.");
+  }
 }
 
 export async function generarDecisionDeAnio(estado: EstadoIA): Promise<DecisionGenerada> {
@@ -240,6 +254,7 @@ export async function generarDecisionDeAnio(estado: EstadoIA): Promise<DecisionG
     texto_campo_libre?: string;
     opciones: OpcionGenerada[];
   }>("generar_inicio_anio", estado, "presentar_decision", DECISION_SCHEMA, { instruccion_adicional });
+  validarOpciones(raw.opciones);
 
   return {
     titulo: raw.titulo,
@@ -251,7 +266,9 @@ export async function generarDecisionDeAnio(estado: EstadoIA): Promise<DecisionG
 }
 
 export async function generarEvento(estado: EstadoIA): Promise<EventoGenerado> {
-  return llamarHerramienta<EventoGenerado>("generar_evento", estado, "presentar_evento", EVENTO_SCHEMA);
+  const evento = await llamarHerramienta<EventoGenerado>("generar_evento", estado, "presentar_evento", EVENTO_SCHEMA);
+  validarOpciones(evento.opciones);
+  return evento;
 }
 
 export async function procesarEleccion(
