@@ -288,8 +288,17 @@ export async function procesarEleccion(
       narrativa: { type: "string", description: "Máximo 2 párrafos cortos en markdown (ver regla 2b), con diálogos citados como blockquote. Corta en la resolución inmediata, sin auto-resolver oportunidades futuras." },
       ingreso_nuevo: { type: "number", description: "Nuevo ingreso mensual en pesos colombianos (valor absoluto, no delta)" },
       skills_modificadas: {
-        type: "object",
-        description: "Mapa skillId -> delta (positivo, o negativo solo para saludMental en burnout). Usa nombres de skill en camelCase como 'disciplina', 'networking', 'ventas', 'ingles', etc.",
+        type: "array",
+        description: "Skills que suben (o baja saludMental en burnout) con esta consecuencia. Usa nombres de skill en camelCase como 'disciplina', 'networking', 'ventas', 'ingles', etc. Puede ser un array vacío si ninguna cambia.",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            skill: { type: "string" },
+            delta: { type: "number" },
+          },
+          required: ["skill", "delta"],
+        },
       },
       puntos_perfil: {
         type: "object",
@@ -321,7 +330,7 @@ export async function procesarEleccion(
   const raw = await llamarHerramienta<{
     narrativa: string;
     ingreso_nuevo: number;
-    skills_modificadas: Record<string, number>;
+    skills_modificadas: Array<{ skill: string; delta: number }>;
     puntos_perfil: Puntos;
     medalla_desbloqueada: string | null;
     mentor_activado: string | null;
@@ -330,10 +339,15 @@ export async function procesarEleccion(
     decision_tomada: decisionTomada,
   });
 
+  const skillsModificadas: Record<string, number> = {};
+  for (const { skill, delta } of raw.skills_modificadas ?? []) {
+    if (skill) skillsModificadas[skill] = delta;
+  }
+
   return {
     narrativa: raw.narrativa,
     ingresoNuevo: Math.max(0, Math.round(raw.ingreso_nuevo)),
-    skillsModificadas: raw.skills_modificadas ?? {},
+    skillsModificadas,
     puntosPerfil: raw.puntos_perfil,
     medallaDesbloqueada: raw.medalla_desbloqueada,
     mentorActivado: raw.mentor_activado,
