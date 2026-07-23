@@ -1,0 +1,107 @@
+// Prisma schema — Modo GOAT
+// Ver GDD § 3 (Base de Datos). Alcance recortado a lo que pide § "Prioridades para el demo":
+// sin auth compleja, sin mentores/medallas persistidos aparte (se calculan en el motor).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Jugador {
+  id        String    @id @default(cuid())
+  nombre    String
+  edad      Int
+  genero    String
+  ciudad    String    @default("Medellín")
+  contexto  String
+  trabaja   String
+  createdAt DateTime  @default(now())
+  partidas  Partida[]
+}
+
+model Partida {
+  id        String  @id @default(cuid())
+  jugadorId String
+  jugador   Jugador @relation(fields: [jugadorId], references: [id])
+
+  // Onboarding
+  respuestasOnboarding Json
+  tiemposOnboarding    Json
+  areaLibre            String?
+  rutaEntrada          String?
+
+  // Perfil calculado
+  puntosPerfil     Json
+  perfilDominante  String?
+  perfilSecundario String?
+  esMixto          Boolean @default(false)
+  bigFive          Json?
+
+  // Estado del juego
+  edadInicio     Int
+  edadActual     Int     @default(0)
+  ingresoActual  Int     @default(0)
+  ahorros        Int     @default(0)
+  skills         Json    @default("{}")
+  aniosJugados   Int     @default(0)
+  aniosEstancado Int     @default(0)
+  mentorActivo   String?
+  estado         String  @default("onboarding") // onboarding | jugando | terminado
+
+  // Resultado
+  resultadoTipo   String?
+  ingresoFinal    Int?
+  skillsFinales   Json?
+  medallasGanadas String[] @default([])
+  alertas         String[] @default([])
+
+  // Anti-troll
+  tiempoPromedio Float?
+  patronTroll    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  decisiones DecisionJugada[]
+  eventos    EventoJugado[]
+
+  @@index([perfilDominante])
+  @@index([estado])
+}
+
+model DecisionJugada {
+  id        String  @id @default(cuid())
+  partidaId String
+  partida   Partida @relation(fields: [partidaId], references: [id])
+
+  anio            Int
+  decisionId      String
+  opcionElegida   String
+  campoLibre      String?
+  tiempoRespuesta Float
+
+  ingresoAntes   Int
+  ingresoDespues Int
+  skillsSubidas  Json
+  puntosSumados  Json
+
+  createdAt DateTime @default(now())
+}
+
+model EventoJugado {
+  id        String  @id @default(cuid())
+  partidaId String
+  partida   Partida @relation(fields: [partidaId], references: [id])
+
+  anio            Int
+  tipoEvento      String // imprevisto | oportunidad
+  eventoId        String
+  opcionElegida   String
+  tiempoRespuesta Float
+
+  createdAt DateTime @default(now())
+}

@@ -1,26 +1,76 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --goat-bg: #0f0e17;
+  --goat-surface: #1a1826;
+  --goat-surface-2: #232032;
+  --goat-ink: #f5f3ff;
+  --goat-ink-muted: #a8a4bd;
+  --goat-accent: #ffb734;
+  --goat-accent-ink: #1a1400;
+  --goat-good: #6ee7a0;
+  --goat-bad: #ff7a68;
+  --goat-border: #2e2b40;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-goat-bg: var(--goat-bg);
+  --color-goat-surface: var(--goat-surface);
+  --color-goat-surface-2: var(--goat-surface-2);
+  --color-goat-ink: var(--goat-ink);
+  --color-goat-ink-muted: var(--goat-ink-muted);
+  --color-goat-accent: var(--goat-accent);
+  --color-goat-accent-ink: var(--goat-accent-ink);
+  --color-goat-good: var(--goat-good);
+  --color-goat-bad: var(--goat-bad);
+  --color-goat-border: var(--goat-border);
+  --font-sans: var(--font-nunito);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-nunito), Arial, Helvetica, sans-serif;
+}
+
+.btn-primary {
+  background: var(--goat-accent);
+  color: var(--goat-accent-ink);
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 0.9rem 1.75rem;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.btn-primary:active {
+  transform: scale(0.97);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+}
+
+.btn-secondary {
+  background: var(--goat-surface-2);
+  color: var(--goat-ink);
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.9rem 1.75rem;
+  border: 1px solid var(--goat-border);
+}
+
+.card {
+  background: var(--goat-surface);
+  border: 1px solid var(--goat-border);
+  border-radius: 1.25rem;
+}
+
+.opcion-btn {
+  background: var(--goat-surface-2);
+  border: 1px solid var(--goat-border);
+  border-radius: 1rem;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.opcion-btn:hover {
+  border-color: var(--goat-accent);
+}
+.opcion-btn:active {
+  background: var(--goat-surface);
 }
