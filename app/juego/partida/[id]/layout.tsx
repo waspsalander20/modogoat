@@ -12,7 +12,7 @@ export default async function PartidaLayout({
   const { id } = await params;
 
   return (
-    <PartidaHeaderProvider partidaId={id}>
+    <PartidaHeaderProvider key={id} partidaId={id}>
       <div className="flex flex-1 flex-col min-h-full">
         <Header />
         <div className="flex-1 flex flex-col bg-goat-bg">{children}</div>

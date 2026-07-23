@@ -21,6 +21,11 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   }
 
   const decisionEsteAnio = partida.decisiones.find((d) => d.anio === partida.edadActual);
+  if (!decisionEsteAnio || partida.turnoActual) {
+    // Todavía falta resolver la decisión (o un evento) de este año — no se
+    // puede cerrar el año sin eso, sin importar qué haya disparado esta llamada.
+    return NextResponse.json({ error: "Todavía tienes una decisión pendiente este año" }, { status: 400 });
+  }
   const seEstanco = decisionEsteAnio ? decisionEsteAnio.ingresoDespues <= decisionEsteAnio.ingresoAntes : true;
   const aniosEstancado = seEstanco ? partida.aniosEstancado + 1 : 0;
 
