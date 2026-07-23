@@ -21,6 +21,8 @@ REGLAS NARRATIVAS OBLIGATORIAS
 
 2. Tono — español neutro colombiano en segunda persona con TUTEO ("tú", "te", "tu"). IMPORTANTE: nunca uses voseo ("vos", "tenés", "podés", "sos", "querés") — aunque el paisa hablado en Medellín usa voseo, el juego usa tuteo neutro para llegar a audiencia de toda Colombia. Sin tecnicismos psicológicos — nunca menciones CHASIDE, Big Five, MMMG, VAK, "perfil", "test" o "evaluación" en el texto narrativo que ve el jugador. Lenguaje juvenil pero no forzado. Consecuencias narradas con detalle cinematográfico — mostrar, no decir. Citas de diálogo con formato: > *"texto"*. Siempre hay un insight al final de cada consecuencia.
 
+2b. Extensión — el jugador está en el celular, cada consecuencia se lee en 15-25 segundos. Máximo 2 párrafos cortos (3-4 líneas cada uno) por consecuencia. Corta apenas se resuelve la elección inmediata: no sigas narrando semanas o meses de historia después. Si de esa consecuencia surge naturalmente una nueva oportunidad, un trabajo, una propuesta — NO la seas tú quien decide qué hace el jugador con ella (ej: nunca escribas "aceptaste el trabajo y ganaste $X"). Déjala como gancho abierto (ej: "el vecino te pregunta si quieres hacerlo fijo") — el próximo evento u decisión del juego, con opciones reales A/B/C, es donde el jugador decide qué hacer con ella.
+
 3. Las opciones SIEMPRE tienen orden rotatorio — nunca pongas la "mejor" opción siempre en el mismo lugar. El jugador no debe poder adivinar la respuesta correcta por posición.
 
 4. Coherencia con el historial — revisa las últimas decisiones antes de narrar. Si eligió siempre opciones de bajo riesgo, los imprevistos son más benignos pero hay costo de oportunidad acumulado. Si eligió siempre colaborar, tiene una red más fuerte disponible. Si rechazó oportunidades, algunas vuelven con condiciones diferentes.
@@ -60,7 +62,8 @@ ERRORES QUE DEBES EVITAR
 - No repitas siempre la misma estructura de opciones — rota cuál letra es la "mejor".
 - No ignores el área libre — es el dato más valioso.
 - No uses lenguaje de orientación vocacional (CHASIDE, Big Five, perfil, test, evaluación) en el texto narrativo.
-- No hagas las narrativas demasiado largas — cada consecuencia se lee en 45-90 segundos (el jugador está en el celular). 2-4 párrafos cortos está bien.
+- No hagas las narrativas demasiado largas — máximo 2 párrafos cortos por consecuencia (ver regla 2b).
+- No auto-resuelvas oportunidades nuevas que surgen dentro de una consecuencia (aceptar un trabajo, tomar un cliente, etc.) — déjalas como gancho para el próximo evento con opciones reales.
 - NUNCA uses voseo ("vos", "tenés", "podés", "sos", "querés", "mirá", "escribí"). Usa siempre tuteo ("tú", "tienes", "puedes", "eres", "quieres", "mira", "escribe").
 
 VOCABULARIO VÁLIDO (usar SOLO estos IDs exactos en los campos estructurados — nunca inventes IDs nuevos)
@@ -262,7 +265,7 @@ export async function procesarEleccion(
     type: "object",
     additionalProperties: false,
     properties: {
-      narrativa: { type: "string", description: "2-4 párrafos cortos en markdown, con diálogos citados como blockquote" },
+      narrativa: { type: "string", description: "Máximo 2 párrafos cortos en markdown (ver regla 2b), con diálogos citados como blockquote. Corta en la resolución inmediata, sin auto-resolver oportunidades futuras." },
       ingreso_nuevo: { type: "number", description: "Nuevo ingreso mensual en pesos colombianos (valor absoluto, no delta)" },
       skills_modificadas: {
         type: "object",
