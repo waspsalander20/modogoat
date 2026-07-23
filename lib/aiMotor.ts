@@ -2,7 +2,9 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { PerfilId, Puntos } from "@/lib/types";
 
 const anthropic = new Anthropic();
-const MODEL = "claude-opus-4-8";
+// Sonnet 5, no Opus — el usuario priorizó velocidad de respuesta sobre
+// profundidad narrativa (cada turno bloquea la UI hasta que la IA responde).
+const MODEL = "claude-sonnet-5";
 
 // Sistema condensado a partir de ModoGOAT_Prompt_Motor.md — se mantienen las
 // reglas narrativas, los 5 perfiles y las reglas de detección invisible tal
@@ -166,7 +168,7 @@ const EVENTO_SCHEMA = {
     tipo: { type: "string", enum: ["imprevisto", "oportunidad"] },
     nombre: { type: "string" },
     emoji: { type: "string" },
-    texto: { type: "string" },
+    texto: { type: "string", description: "2-4 líneas de contexto narrativo antes de las opciones" },
     opciones: {
       type: "array",
       minItems: 4,
@@ -194,7 +196,8 @@ async function llamarHerramienta<T>(
   estado: EstadoIA,
   toolName: string,
   toolSchema: object,
-  extra?: { decision_tomada?: unknown; instruccion_adicional?: string }
+  extra?: { decision_tomada?: unknown; instruccion_adicional?: string },
+  maxTokens = 1024
 ): Promise<T> {
   const userContent = JSON.stringify({
     accion,
@@ -204,7 +207,7 @@ async function llamarHerramienta<T>(
 
   const response = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 2048,
+    max_tokens: maxTokens,
     system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
     tools: [
       {
@@ -339,5 +342,5 @@ export async function generarAnalisisFinal(estado: EstadoIA): Promise<AnalisisFi
     required: ["narrativa"],
   };
 
-  return llamarHerramienta<AnalisisFinal>("generar_analisis_final", estado, "presentar_analisis", schema);
+  return llamarHerramienta<AnalisisFinal>("generar_analisis_final", estado, "presentar_analisis", schema, undefined, 1536);
 }
