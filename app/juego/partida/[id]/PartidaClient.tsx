@@ -235,7 +235,9 @@ function DecisionCard({
           Decisión principal
         </div>
         <h2 className="text-lg font-extrabold mb-2">{decision.titulo}</h2>
-        <p className="text-goat-ink-muted text-sm">{decision.texto}</p>
+        <div className="prose-narrativa text-goat-ink-muted text-sm">
+          <ReactMarkdown>{decision.texto}</ReactMarkdown>
+        </div>
       </div>
 
       <p className="text-center font-extrabold text-sm">¿Qué decides hacer?</p>
@@ -428,7 +430,9 @@ function EventoCard({
           {esImprevisto ? "Imprevisto" : "Oportunidad"}
         </div>
         <h2 className="text-lg font-extrabold mb-1">{evento.nombre}</h2>
-        <p className="text-goat-ink-muted text-sm">{evento.texto}</p>
+        <div className="prose-narrativa text-goat-ink-muted text-sm">
+          <ReactMarkdown>{evento.texto}</ReactMarkdown>
+        </div>
       </div>
 
       <div className="flex flex-col gap-3">
