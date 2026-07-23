@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/lib/generated/prisma/client";
 import { calcularGastos, determinarResultado, elegirMedallasGanadas } from "@/lib/motor";
 import { generarAlertas } from "@/lib/perfilamiento";
+import { generarAnalisisFinal } from "@/lib/aiMotor";
+import { construirEstadoIA } from "@/lib/estadoIA";
 import type { EstadoPartida, PerfilId, Puntos } from "@/lib/types";
 
 const EDAD_FIN = 30;
@@ -28,7 +31,13 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   if (nuevaEdad < EDAD_FIN) {
     await prisma.partida.update({
       where: { id },
-      data: { edadActual: nuevaEdad, ahorros, aniosEstancado, aniosJugados: partida.aniosJugados + 1 },
+      data: {
+        edadActual: nuevaEdad,
+        ahorros,
+        aniosEstancado,
+        aniosJugados: partida.aniosJugados + 1,
+        turnoActual: Prisma.DbNull,
+      },
     });
     return NextResponse.json({ terminado: false, edadActual: nuevaEdad });
   }
@@ -76,6 +85,24 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   );
   const medallas = elegirMedallasGanadas(estado, resultadoTipo);
 
+  const historial = [
+    ...partida.decisiones.map((d) => ({ anio: d.anio, titulo: d.titulo, opcionElegida: d.opcionElegida })),
+    ...partida.eventos.map((e) => ({ anio: e.anio, titulo: e.nombre, opcionElegida: e.opcionElegida })),
+  ].sort((a, b) => a.anio - b.anio);
+  const estadoIA = construirEstadoIA(
+    { ...partida, edadActual: nuevaEdad, mentorActivo: partida.mentorActivo },
+    historial,
+    null
+  );
+
+  let analisisFinal: string | null = null;
+  try {
+    const resultado = await generarAnalisisFinal(estadoIA);
+    analisisFinal = resultado.narrativa;
+  } catch (error) {
+    console.error("Error generando análisis final con IA:", error);
+  }
+
   await prisma.partida.update({
     where: { id },
     data: {
@@ -90,6 +117,8 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
       medallasGanadas: medallas,
       alertas,
       patronTroll: esTroll,
+      analisisFinal,
+      turnoActual: Prisma.DbNull,
     },
   });
 

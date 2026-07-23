@@ -1,16 +1,29 @@
 @import "tailwindcss";
 
 :root {
-  --goat-bg: #0f0e17;
-  --goat-surface: #1a1826;
-  --goat-surface-2: #232032;
-  --goat-ink: #f5f3ff;
-  --goat-ink-muted: #a8a4bd;
-  --goat-accent: #ffb734;
-  --goat-accent-ink: #1a1400;
-  --goat-good: #6ee7a0;
-  --goat-bad: #ff7a68;
-  --goat-border: #2e2b40;
+  --goat-bg: #f5f5fb;
+  --goat-surface: #ffffff;
+  --goat-surface-2: #f3f3fb;
+  --goat-ink: #17172e;
+  --goat-ink-muted: #6b6b85;
+  --goat-border: #e9e9f4;
+
+  --goat-header-bg: #15142b;
+  --goat-header-bg-2: #1c1a3a;
+  --goat-header-ink: #ffffff;
+  --goat-header-ink-muted: #a6a3c9;
+
+  --goat-accent-from: #6366f1;
+  --goat-accent-to: #a855f7;
+  --goat-accent-solid: #6366f1;
+  --goat-accent-ink: #ffffff;
+  --goat-accent-tint: #eef0ff;
+
+  --goat-good-bg: #dcfce7;
+  --goat-good-text: #15803d;
+  --goat-bad: #ef4444;
+  --goat-bad-bg: #fee2e2;
+  --goat-warn: #f59e0b;
 }
 
 @theme inline {
@@ -19,11 +32,18 @@
   --color-goat-surface-2: var(--goat-surface-2);
   --color-goat-ink: var(--goat-ink);
   --color-goat-ink-muted: var(--goat-ink-muted);
-  --color-goat-accent: var(--goat-accent);
-  --color-goat-accent-ink: var(--goat-accent-ink);
-  --color-goat-good: var(--goat-good);
-  --color-goat-bad: var(--goat-bad);
   --color-goat-border: var(--goat-border);
+  --color-goat-header-bg: var(--goat-header-bg);
+  --color-goat-header-ink: var(--goat-header-ink);
+  --color-goat-header-ink-muted: var(--goat-header-ink-muted);
+  --color-goat-accent-solid: var(--goat-accent-solid);
+  --color-goat-accent-ink: var(--goat-accent-ink);
+  --color-goat-accent-tint: var(--goat-accent-tint);
+  --color-goat-good-bg: var(--goat-good-bg);
+  --color-goat-good-text: var(--goat-good-text);
+  --color-goat-bad: var(--goat-bad);
+  --color-goat-bad-bg: var(--goat-bad-bg);
+  --color-goat-warn: var(--goat-warn);
   --font-sans: var(--font-nunito);
 }
 
@@ -32,45 +52,105 @@ body {
 }
 
 .btn-primary {
-  background: var(--goat-accent);
+  background: linear-gradient(135deg, var(--goat-accent-from), var(--goat-accent-to));
   color: var(--goat-accent-ink);
   font-weight: 800;
   border-radius: 999px;
   padding: 0.9rem 1.75rem;
-  transition: transform 0.15s ease, opacity 0.15s ease;
+  box-shadow: 0 8px 20px -8px rgba(99, 102, 241, 0.55);
+  transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
 }
 .btn-primary:active {
   transform: scale(0.97);
 }
 .btn-primary:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
+  box-shadow: none;
 }
 
 .btn-secondary {
-  background: var(--goat-surface-2);
-  color: var(--goat-ink);
+  background: var(--goat-surface);
+  color: var(--goat-accent-solid);
   font-weight: 700;
   border-radius: 999px;
   padding: 0.9rem 1.75rem;
-  border: 1px solid var(--goat-border);
+  border: 1.5px solid var(--goat-accent-solid);
 }
 
 .card {
   background: var(--goat-surface);
   border: 1px solid var(--goat-border);
   border-radius: 1.25rem;
+  box-shadow: 0 2px 12px -4px rgba(23, 23, 46, 0.06);
 }
 
 .opcion-btn {
-  background: var(--goat-surface-2);
-  border: 1px solid var(--goat-border);
+  background: var(--goat-surface);
+  border: 1.5px solid var(--goat-border);
   border-radius: 1rem;
   text-align: left;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 .opcion-btn:hover {
-  border-color: var(--goat-accent);
+  border-color: var(--goat-accent-solid);
 }
 .opcion-btn:active {
-  background: var(--goat-surface);
+  background: var(--goat-surface-2);
+}
+
+.badge-letra {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  min-width: 2rem;
+  border-radius: 0.65rem;
+  background: var(--goat-accent-tint);
+  color: var(--goat-accent-solid);
+  font-weight: 800;
+  font-size: 0.875rem;
+}
+.opcion-btn.seleccionada .badge-letra {
+  background: linear-gradient(135deg, var(--goat-accent-from), var(--goat-accent-to));
+  color: #fff;
+}
+
+.pill-skill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--goat-good-bg);
+  color: var(--goat-good-text);
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+}
+
+.pill-income {
+  background: rgba(99, 102, 241, 0.28);
+  color: #fff;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.85rem;
+}
+
+.prose-narrativa p {
+  margin-bottom: 0.85rem;
+  color: var(--goat-ink);
+}
+.prose-narrativa p:last-child {
+  margin-bottom: 0;
+}
+.prose-narrativa blockquote {
+  border-left: 3px solid var(--goat-accent-solid);
+  padding-left: 0.85rem;
+  margin: 0.85rem 0;
+  font-style: italic;
+  color: var(--goat-ink-muted);
+}
+.prose-narrativa strong {
+  color: var(--goat-ink);
 }

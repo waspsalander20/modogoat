@@ -1,20 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import ReactMarkdown from "react-markdown";
 import { prisma } from "@/lib/prisma";
 import { formatoPesos } from "@/lib/format";
 import { nombreSkill, emojiSkill } from "@/lib/data/skills";
 import { medalla } from "@/lib/data/medallas";
-import { TEXTOS_FINAL, TEXTO_FINAL_MIXTO, MENSAJES_RESULTADO, MENSAJES_BARRERA } from "@/lib/data/mensajes";
-import { detectarBarreraPrincipal } from "@/lib/perfilamiento";
+import { MENSAJES_RESULTADO } from "@/lib/data/mensajes";
+import { NOMBRES_PERFIL } from "@/lib/data/perfiles";
 import type { PerfilId } from "@/lib/types";
-
-const NOMBRES_PERFIL: Record<PerfilId, string> = {
-  EMP: "Empleado / Operador",
-  INV: "Investigador / Salud-Social",
-  EMP2: "Emprendedor",
-  FREE: "Freelancer / Técnico-Creador",
-  CRE: "Creador de contenidos",
-};
 
 const TITULOS_RESULTADO: Record<string, string> = {
   goat: "🐐 GOAT MODE",
@@ -40,18 +33,11 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
   const perfilSecundario = partida.perfilSecundario as PerfilId | null;
   const resultado = partida.resultadoTipo ?? "medio";
 
-  let textoFinal: string;
-  if (resultado === "troll") {
-    textoFinal = MENSAJES_RESULTADO.troll;
-  } else if (resultado === "medio" || resultado === "bajo") {
-    textoFinal = MENSAJES_RESULTADO[resultado as "medio" | "bajo"];
-  } else if (partida.esMixto && perfilDominante && perfilSecundario) {
-    textoFinal = TEXTO_FINAL_MIXTO(TEXTOS_FINAL[perfilDominante], TEXTOS_FINAL[perfilSecundario]);
-  } else {
-    textoFinal = TEXTOS_FINAL[perfilDominante ?? "EMP"];
-  }
+  // El cierre narrativo lo escribe el motor de IA, personalizado con el área
+  // y las decisiones del jugador. Si esa llamada falló, caemos al mensaje
+  // genérico fijo para no dejar la pantalla vacía.
+  const textoFinal = partida.analisisFinal ?? MENSAJES_RESULTADO[resultado as "medio" | "bajo" | "troll"] ?? MENSAJES_RESULTADO.medio;
 
-  const barreraPrincipal = detectarBarreraPrincipal(partida.alertas);
   const skillsFinales = (partida.skillsFinales as Record<string, number>) ?? {};
   const skillsOrdenadas = Object.entries(skillsFinales)
     .filter(([, v]) => v > 0)
@@ -68,16 +54,10 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
       </div>
 
       <div className="card p-5">
-        <p className="whitespace-pre-line text-sm leading-relaxed">{textoFinal}</p>
-      </div>
-
-      {barreraPrincipal && MENSAJES_BARRERA[barreraPrincipal] && (
-        <div className="card p-5 border-goat-accent/50">
-          <p className="whitespace-pre-line text-sm leading-relaxed text-goat-ink-muted">
-            {MENSAJES_BARRERA[barreraPrincipal]}
-          </p>
+        <div className="prose-narrativa text-sm leading-relaxed">
+          <ReactMarkdown>{textoFinal}</ReactMarkdown>
         </div>
-      )}
+      </div>
 
       <div className="card p-5">
         <h2 className="font-extrabold mb-3">Tu informe de perfil</h2>
@@ -93,7 +73,7 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
         )}
         <div className="flex justify-between text-sm mb-2">
           <span className="text-goat-ink-muted">Ingreso final</span>
-          <span className="font-bold text-goat-accent">
+          <span className="font-bold text-goat-accent-solid">
             {partida.ingresoFinal !== null ? formatoPesos(partida.ingresoFinal) : "—"}/mes
           </span>
         </div>

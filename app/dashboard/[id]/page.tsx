@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { formatoPesos } from "@/lib/format";
 import { nombreSkill } from "@/lib/data/skills";
 import { medalla } from "@/lib/data/medallas";
-import { BANCO_DECISIONES } from "@/lib/data/decisiones";
 
 export default async function DashboardIndividualPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -20,7 +19,7 @@ export default async function DashboardIndividualPage({ params }: { params: Prom
 
   return (
     <main className="flex flex-1 flex-col px-6 py-10 max-w-2xl mx-auto w-full gap-6">
-      <Link href="/dashboard" className="text-goat-accent text-sm font-bold">
+      <Link href="/dashboard" className="text-goat-accent-solid text-sm font-bold">
         ← Volver
       </Link>
 
@@ -93,7 +92,7 @@ export default async function DashboardIndividualPage({ params }: { params: Prom
           <h2 className="font-extrabold mb-3">Alertas</h2>
           <div className="flex flex-wrap gap-2">
             {partida.alertas.map((a) => (
-              <span key={a} className="text-xs bg-goat-accent/15 text-goat-accent border border-goat-accent/40 rounded-full px-3 py-1.5">
+              <span key={a} className="text-xs bg-goat-accent-tint text-goat-accent-solid border border-goat-accent-solid/40 rounded-full px-3 py-1.5">
                 {a}
               </span>
             ))}
@@ -103,22 +102,44 @@ export default async function DashboardIndividualPage({ params }: { params: Prom
 
       <div className="card p-5">
         <h2 className="font-extrabold mb-3">Decisiones tomadas</h2>
-        <div className="flex flex-col gap-2 text-sm">
-          {partida.decisiones.map((d) => {
-            const decisionInfo = BANCO_DECISIONES.find((dec) => dec.id === d.decisionId);
-            return (
-              <div key={d.id} className="flex justify-between border-b border-goat-border/50 pb-2">
-                <span>
-                  Año {d.anio} · {decisionInfo?.titulo ?? d.decisionId}
+        <div className="flex flex-col gap-3 text-sm">
+          {partida.decisiones.map((d) => (
+            <div key={d.id} className="border-b border-goat-border/50 pb-3">
+              <div className="flex justify-between">
+                <span className="font-bold">
+                  Año {d.anio} · {d.titulo || d.decisionId}
                 </span>
-                <span className="text-goat-ink-muted">
+                <span className="text-goat-ink-muted text-xs">
                   Opción {d.opcionElegida} · {d.tiempoRespuesta.toFixed(1)}s
                 </span>
               </div>
-            );
-          })}
+              {d.opcionTexto && <p className="text-goat-ink-muted mt-1">{d.opcionTexto}</p>}
+            </div>
+          ))}
         </div>
       </div>
+
+      {partida.eventos.length > 0 && (
+        <div className="card p-5">
+          <h2 className="font-extrabold mb-3">Eventos vividos</h2>
+          <div className="flex flex-col gap-3 text-sm">
+            {partida.eventos.map((e) => (
+              <div key={e.id} className="border-b border-goat-border/50 pb-3">
+                <div className="flex justify-between">
+                  <span className="font-bold">
+                    Año {e.anio} · {e.nombre || e.eventoId}{" "}
+                    <span className="font-normal text-goat-ink-muted">({e.tipoEvento})</span>
+                  </span>
+                  <span className="text-goat-ink-muted text-xs">
+                    Opción {e.opcionElegida} · {e.tiempoRespuesta.toFixed(1)}s
+                  </span>
+                </div>
+                {e.opcionTexto && <p className="text-goat-ink-muted mt-1">{e.opcionTexto}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

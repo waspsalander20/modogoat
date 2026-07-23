@@ -39,7 +39,7 @@ export default function LoginForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Contraseña"
-          className="bg-goat-surface-2 border border-goat-border rounded-xl px-4 py-3 outline-none focus:border-goat-accent"
+          className="bg-goat-surface-2 border border-goat-border rounded-xl px-4 py-3 outline-none focus:border-goat-accent-solid"
         />
         {error && <p className="text-goat-bad text-sm">{error}</p>}
         <button className="btn-primary" disabled={cargando || !password}>

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { BANCO_IMPREVISTOS } from "@/lib/data/imprevistos";
-import { BANCO_OPORTUNIDADES } from "@/lib/data/oportunidades";
-import { aplicarSkills } from "@/lib/motor";
+import { Prisma } from "@/lib/generated/prisma/client";
+import { procesarEleccion, generarEvento, type EventoGenerado } from "@/lib/aiMotor";
+import { construirEstadoIA } from "@/lib/estadoIA";
+import { aplicarSkills, sumarPuntos, calcularPerfil } from "@/lib/motor";
+import type { Puntos } from "@/lib/types";
 
 interface Body {
-  eventoId: string;
-  tipoEvento: "imprevisto" | "oportunidad";
   opcionLetra: "A" | "B" | "C" | "D";
   tiempoRespuesta: number;
 }
@@ -15,33 +15,71 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { id } = await params;
   const body = (await request.json()) as Body;
 
-  const banco = body.tipoEvento === "imprevisto" ? BANCO_IMPREVISTOS : BANCO_OPORTUNIDADES;
-  const evento = banco.find((e) => e.id === body.eventoId);
-  if (!evento) {
-    return NextResponse.json({ error: "Evento inválido" }, { status: 400 });
+  const partida = await prisma.partida.findUnique({
+    where: { id },
+    include: {
+      jugador: true,
+      decisiones: { orderBy: { anio: "asc" } },
+      eventos: { orderBy: { anio: "asc" } },
+    },
+  });
+
+  if (!partida || partida.estado !== "jugando") {
+    return NextResponse.json({ error: "Partida no disponible" }, { status: 404 });
   }
+
+  const turno = partida.turnoActual as { tipo: string; evento?: EventoGenerado } | null;
+  if (!turno || turno.tipo !== "evento" || !turno.evento) {
+    return NextResponse.json({ error: "No hay un evento pendiente" }, { status: 400 });
+  }
+  const evento = turno.evento;
   const opcion = evento.opciones.find((o) => o.letra === body.opcionLetra);
   if (!opcion) {
     return NextResponse.json({ error: "Opción inválida" }, { status: 400 });
   }
 
-  const partida = await prisma.partida.findUnique({ where: { id } });
-  if (!partida || partida.estado !== "jugando") {
-    return NextResponse.json({ error: "Partida no disponible" }, { status: 404 });
+  const historial = [
+    ...partida.decisiones.map((d) => ({ anio: d.anio, titulo: d.titulo, opcionElegida: d.opcionElegida })),
+    ...partida.eventos.map((e) => ({ anio: e.anio, titulo: e.nombre, opcionElegida: e.opcionElegida })),
+  ].sort((a, b) => a.anio - b.anio);
+  const estadoIA = construirEstadoIA(partida, historial, evento.nombre);
+
+  let consecuencia;
+  try {
+    consecuencia = await procesarEleccion(estadoIA, {
+      titulo: evento.nombre,
+      opcion_elegida: opcion.letra,
+      opcion_texto: opcion.texto,
+      tiempo_respuesta: body.tiempoRespuesta ?? 0,
+    });
+  } catch (error) {
+    console.error("Error procesando evento con IA:", error);
+    return NextResponse.json({ error: "No pudimos continuar tu historia. Intenta de nuevo." }, { status: 502 });
   }
 
-  let ingresoModifica = opcion.ingresoModifica ?? 0;
-  if (opcion.resultado === "aleatorio") {
-    // 50/50: la oportunidad trampa puede salir bien o mal
-    ingresoModifica = Math.random() < 0.5 ? 1500000 : -1500000;
-  }
+  const ingresoAntes = partida.ingresoActual;
+  const ingresoDespues = consecuencia.ingresoNuevo;
+  const skillsNuevas = aplicarSkills(partida.skills as Record<string, number>, consecuencia.skillsModificadas);
+  const puntosNuevos = sumarPuntos(partida.puntosPerfil as unknown as Puntos, consecuencia.puntosPerfil);
+  const perfil = calcularPerfil(puntosNuevos);
 
-  const ingresoNuevo = Math.max(0, partida.ingresoActual + ingresoModifica);
-  const skillsNuevas = aplicarSkills(partida.skills as Record<string, number>, opcion.skillsModifica);
+  const medallasGanadas = consecuencia.medallaDesbloqueada
+    ? Array.from(new Set([...partida.medallasGanadas, consecuencia.medallaDesbloqueada]))
+    : partida.medallasGanadas;
+  const alertas = consecuencia.alertaGenerada
+    ? Array.from(new Set([...partida.alertas, consecuencia.alertaGenerada]))
+    : partida.alertas;
+  const mentorActivo = partida.mentorActivo ?? consecuencia.mentorActivado;
 
-  let mentorActivo = partida.mentorActivo;
-  if (opcion.resultado === "mentor_activado" || opcion.resultado === "mentor_activado_lento") {
-    mentorActivo = mentorActivo ?? "pendiente";
+  const eventosEsteAnio = partida.eventos.filter((e) => e.anio === partida.edadActual).length + 1;
+  let nuevoTurno = null;
+  if (eventosEsteAnio < 2 && Math.random() < 0.3) {
+    try {
+      const siguienteEvento = await generarEvento(estadoIA);
+      nuevoTurno = { tipo: "evento" as const, evento: siguienteEvento };
+    } catch (error) {
+      console.error("Error generando siguiente evento con IA:", error);
+    }
   }
 
   await prisma.$transaction([
@@ -49,30 +87,37 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       data: {
         partidaId: id,
         anio: partida.edadActual,
-        tipoEvento: body.tipoEvento,
-        eventoId: evento.id,
+        tipoEvento: evento.tipo,
+        eventoId: evento.nombre,
+        nombre: evento.nombre,
         opcionElegida: opcion.letra,
+        opcionTexto: opcion.texto,
         tiempoRespuesta: body.tiempoRespuesta ?? 0,
+        narrativa: consecuencia.narrativa,
       },
     }),
     prisma.partida.update({
       where: { id },
       data: {
-        ingresoActual: ingresoNuevo,
+        ingresoActual: ingresoDespues,
         skills: skillsNuevas,
+        puntosPerfil: puntosNuevos,
+        perfilDominante: perfil.dominante,
+        perfilSecundario: perfil.secundario,
+        esMixto: perfil.esMixto,
+        medallasGanadas,
+        alertas,
         mentorActivo,
-        alertas: opcion.alertaGenerada
-          ? Array.from(new Set([...partida.alertas, opcion.alertaGenerada]))
-          : partida.alertas,
+        turnoActual: nuevoTurno ? (nuevoTurno as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
       },
     }),
   ]);
 
   return NextResponse.json({
     ok: true,
-    ingresoAntes: partida.ingresoActual,
-    ingresoDespues: ingresoNuevo,
-    skillsModifica: opcion.skillsModifica,
-    consecuencia: opcion.consecuencia ?? null,
+    narrativa: consecuencia.narrativa,
+    ingresoAntes,
+    ingresoDespues,
+    skillsModificadas: consecuencia.skillsModificadas,
   });
 }

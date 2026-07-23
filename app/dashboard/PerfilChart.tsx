@@ -3,11 +3,11 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
 const COLORES: Record<string, string> = {
-  EMP: "#8b93ff",
-  INV: "#6ee7a0",
-  EMP2: "#ffb734",
-  FREE: "#ff8fd6",
-  CRE: "#68c8ff",
+  EMP: "#6366f1",
+  INV: "#15803d",
+  EMP2: "#a855f7",
+  FREE: "#ec4899",
+  CRE: "#0ea5e9",
 };
 
 const NOMBRES: Record<string, string> = {
@@ -27,17 +27,38 @@ export default function PerfilChart({ distribucion }: { distribucion: Record<str
     return <p className="text-goat-ink-muted text-sm">Todavía no hay partidas terminadas.</p>;
   }
 
+  // Un solo segmento al 100% degenera el arco SVG (ángulo inicial == final en
+  // un círculo completo), así que Recharts no dibuja nada. Lo partimos en dos
+  // mitades del mismo color para que siga viéndose como un círculo sólido.
+  const datosGrafico =
+    data.length === 1 ? [{ ...data[0], value: data[0].value / 2 }, { ...data[0], id: `${data[0].id}_b`, value: data[0].value / 2 }] : data;
+
+  const leyenda = data.map((d) => ({ value: d.name, color: COLORES[d.id] ?? "#999" }));
+
   return (
     <ResponsiveContainer width="100%" height={260}>
       <PieChart>
-        <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label>
-          {data.map((entry) => (
-            <Cell key={entry.id} fill={COLORES[entry.id] ?? "#999"} />
+        <Pie data={datosGrafico} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90}>
+          {datosGrafico.map((entry) => (
+            <Cell key={entry.id} fill={COLORES[entry.id.replace("_b", "")] ?? "#999"} />
           ))}
         </Pie>
-        <Tooltip contentStyle={{ background: "#1a1826", border: "1px solid #2e2b40", borderRadius: 8 }} />
-        <Legend />
+        <Tooltip contentStyle={{ background: "#ffffff", border: "1px solid #e9e9f4", borderRadius: 8 }} />
+        <Legend content={() => <ChartLegend items={leyenda} />} />
       </PieChart>
     </ResponsiveContainer>
+  );
+}
+
+function ChartLegend({ items }: { items: { value: string; color: string }[] }) {
+  return (
+    <ul className="flex flex-wrap justify-center gap-4 mt-2">
+      {items.map((item) => (
+        <li key={item.value} className="flex items-center gap-1.5 text-sm">
+          <span className="w-2.5 h-2.5 rounded-sm" style={{ background: item.color }} />
+          {item.value}
+        </li>
+      ))}
+    </ul>
   );
 }

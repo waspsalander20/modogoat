@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { elegirDecisionParaAnio, seleccionarEventos } from "@/lib/motor";
-import type { EstadoPartida, PerfilId, Puntos } from "@/lib/types";
+import type { Prisma } from "@/lib/generated/prisma/client";
+import { generarDecisionDeAnio } from "@/lib/aiMotor";
+import { construirEstadoIA } from "@/lib/estadoIA";
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   const partida = await prisma.partida.findUnique({
     where: { id },
-    include: { decisiones: true, eventos: true },
+    include: {
+      jugador: true,
+      decisiones: { orderBy: { anio: "asc" } },
+      eventos: { orderBy: { anio: "asc" } },
+    },
   });
 
   if (!partida) {
@@ -19,41 +24,40 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ terminado: true });
   }
 
-  const decisionesUsadas = partida.decisiones.map((d) => d.decisionId);
-  const decision = elegirDecisionParaAnio(partida.edadActual, decisionesUsadas);
+  if (partida.turnoActual) {
+    return NextResponse.json({ terminado: false, anio: partida.edadActual, turno: partida.turnoActual });
+  }
 
-  const eventosDeEsteAnio = partida.eventos.filter((e) => e.anio === partida.edadActual);
-  const eventosUsados = partida.eventos.map((e) => e.eventoId);
-  const anioAnterior = partida.edadActual - 1;
-  const ultimoAnioEventos = partida.eventos.filter((e) => e.anio === anioAnterior).map((e) => e.eventoId);
+  const yaDecidioEsteAnio = partida.decisiones.some((d) => d.anio === partida.edadActual);
+  if (yaDecidioEsteAnio) {
+    // Ya se resolvió la decisión principal (y sus eventos) de este año — el
+    // cliente debe cerrar el año (fin-anio) en vez de recibir otra decisión.
+    return NextResponse.json({ terminado: false, anio: partida.edadActual, turno: null });
+  }
 
-  const estado: EstadoPartida = {
-    id: partida.id,
-    nombre: "",
-    edadInicio: partida.edadInicio,
-    edadActual: partida.edadActual,
-    ingreso: partida.ingresoActual,
-    ahorros: partida.ahorros,
-    puntos: partida.puntosPerfil as unknown as Puntos,
-    skills: partida.skills as Record<string, number>,
-    mentorActivo: partida.mentorActivo,
-    medallasGanadas: partida.medallasGanadas,
-    decisiones: [],
-    eventos: [],
-    aniosEstancado: partida.aniosEstancado,
-    estado: partida.estado as EstadoPartida["estado"],
-  };
+  // No hay turno pendiente: generamos la decisión principal del año.
+  const historial = [
+    ...partida.decisiones.map((d) => ({ anio: d.anio, titulo: d.titulo, opcionElegida: d.opcionElegida })),
+    ...partida.eventos.map((e) => ({ anio: e.anio, titulo: e.nombre, opcionElegida: e.opcionElegida })),
+  ].sort((a, b) => a.anio - b.anio);
 
-  const eventos =
-    eventosDeEsteAnio.length > 0
-      ? [] // ya se generaron eventos este año pero no se han jugado todos — el cliente ya los tiene
-      : seleccionarEventos(estado, (partida.perfilDominante as PerfilId) ?? "EMP", eventosUsados, ultimoAnioEventos);
+  const ultimoEvento = partida.eventos.length > 0 ? partida.eventos[partida.eventos.length - 1].nombre : null;
+  const estadoIA = construirEstadoIA(partida, historial, ultimoEvento);
 
-  return NextResponse.json({
-    terminado: false,
-    anio: partida.edadActual,
-    decision: decision && !partida.decisiones.some((d) => d.decisionId === decision.id) ? decision : null,
-    eventos,
-    eventosYaJugadosEsteAnio: eventosDeEsteAnio.length,
+  let decision;
+  try {
+    decision = await generarDecisionDeAnio(estadoIA);
+  } catch (error) {
+    console.error("Error generando decisión con IA:", error);
+    return NextResponse.json({ error: "No pudimos generar tu historia. Intenta de nuevo." }, { status: 502 });
+  }
+
+  const turno = { tipo: "decision" as const, decision };
+
+  await prisma.partida.update({
+    where: { id },
+    data: { turnoActual: turno as unknown as Prisma.InputJsonValue },
   });
+
+  return NextResponse.json({ terminado: false, anio: partida.edadActual, turno });
 }

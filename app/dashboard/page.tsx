@@ -99,7 +99,7 @@ export default async function DashboardPage() {
                     <td className="py-2 pr-4 capitalize">{p.resultadoTipo ?? "—"}</td>
                     <td className="py-2 pr-4">{p.ingresoFinal !== null ? formatoPesos(p.ingresoFinal) : "—"}</td>
                     <td className="py-2">
-                      <Link href={`/dashboard/${p.id}`} className="text-goat-accent font-bold">
+                      <Link href={`/dashboard/${p.id}`} className="text-goat-accent-solid font-bold">
                         Ver →
                       </Link>
                     </td>
@@ -117,7 +117,7 @@ export default async function DashboardPage() {
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="card p-4">
-      <div className="text-2xl font-extrabold text-goat-accent">{value}</div>
+      <div className="text-2xl font-extrabold text-goat-accent-solid">{value}</div>
       <div className="text-xs text-goat-ink-muted mt-1">{label}</div>
     </div>
   );

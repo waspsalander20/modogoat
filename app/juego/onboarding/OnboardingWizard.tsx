@@ -34,6 +34,7 @@ export default function OnboardingWizard() {
 
   const [respuestas, setRespuestas] = useState<Record<string, string>>({});
   const [tiempos, setTiempos] = useState<Record<string, number>>({});
+  const [opcionSeleccionada, setOpcionSeleccionada] = useState<string | null>(null);
   // Date.now() aquí solo mide tiempo de respuesta para anti-troll; no afecta el render.
   // eslint-disable-next-line react-hooks/purity
   const [inicioPregunta, setInicioPregunta] = useState<number>(Date.now());
@@ -44,8 +45,8 @@ export default function OnboardingWizard() {
   );
 
   function irAPregunta(index: number) {
-    // eslint-disable-next-line react-hooks/purity -- solo se llama desde handlers de click
     setInicioPregunta(Date.now());
+    setOpcionSeleccionada(null);
     setPaso({ tipo: "pregunta", index });
   }
 
@@ -82,7 +83,6 @@ export default function OnboardingWizard() {
   function responder(letra: string) {
     if (paso.tipo !== "pregunta") return;
     const pregunta = PREGUNTAS_ONBOARDING[paso.index];
-    // eslint-disable-next-line react-hooks/purity -- solo se llama desde handlers de click
     const tiempo = (Date.now() - inicioPregunta) / 1000;
     const nuevasRespuestas = { ...respuestas, [pregunta.id]: letra };
     const nuevosTiempos = { ...tiempos, [pregunta.id]: tiempo };
@@ -115,7 +115,7 @@ export default function OnboardingWizard() {
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
             placeholder="Tu nombre"
-            className="bg-goat-surface-2 border border-goat-border rounded-xl px-4 py-3 text-lg outline-none focus:border-goat-accent"
+            className="bg-goat-surface-2 border border-goat-border rounded-xl px-4 py-3 text-lg outline-none focus:border-goat-accent-solid"
           />
           <button
             className="btn-primary self-start"
@@ -138,7 +138,7 @@ export default function OnboardingWizard() {
               max={28}
               value={edad}
               onChange={(e) => setEdad(e.target.value)}
-              className="bg-goat-surface-2 border border-goat-border rounded-xl px-4 py-3 text-lg w-full outline-none focus:border-goat-accent"
+              className="bg-goat-surface-2 border border-goat-border rounded-xl px-4 py-3 text-lg w-full outline-none focus:border-goat-accent-solid"
             />
           </div>
           <div>
@@ -149,7 +149,7 @@ export default function OnboardingWizard() {
                   key={g}
                   onClick={() => setGenero(g)}
                   className={`flex-1 rounded-xl py-3 border capitalize ${
-                    genero === g ? "bg-goat-accent text-goat-accent-ink border-goat-accent font-bold" : "border-goat-border"
+                    genero === g ? "bg-goat-accent-solid text-white border-goat-accent-solid font-bold" : "border-goat-border"
                   }`}
                 >
                   {g}
@@ -175,11 +175,11 @@ export default function OnboardingWizard() {
             <input
               value={ciudad}
               onChange={(e) => setCiudad(e.target.value)}
-              className="bg-goat-surface-2 border border-goat-border rounded-xl px-4 py-3 text-lg w-full outline-none focus:border-goat-accent"
+              className="bg-goat-surface-2 border border-goat-border rounded-xl px-4 py-3 text-lg w-full outline-none focus:border-goat-accent-solid"
             />
           </div>
           <div>
-            <label className="text-sm text-goat-ink-muted block mb-2">¿Con quién vivís?</label>
+            <label className="text-sm text-goat-ink-muted block mb-2">¿Con quién vives?</label>
             <div className="flex flex-col gap-2">
               {[
                 { v: "familia_completa", t: "Familia completa" },
@@ -191,7 +191,11 @@ export default function OnboardingWizard() {
                 <button
                   key={o.v}
                   onClick={() => setContexto(o.v)}
-                  className={`opcion-btn px-4 py-3 ${contexto === o.v ? "border-goat-accent" : ""}`}
+                  className={`rounded-xl px-4 py-3 text-left border font-bold ${
+                    contexto === o.v
+                      ? "bg-goat-accent-solid text-white border-goat-accent-solid"
+                      : "bg-goat-surface-2 border-goat-border font-normal"
+                  }`}
                 >
                   {o.t}
                 </button>
@@ -199,7 +203,7 @@ export default function OnboardingWizard() {
             </div>
           </div>
           <div>
-            <label className="text-sm text-goat-ink-muted block mb-2">¿Trabajás actualmente?</label>
+            <label className="text-sm text-goat-ink-muted block mb-2">¿Trabajas actualmente?</label>
             <div className="flex gap-2">
               {[
                 { v: "si", t: "Sí" },
@@ -210,7 +214,7 @@ export default function OnboardingWizard() {
                   key={o.v}
                   onClick={() => setTrabaja(o.v)}
                   className={`flex-1 rounded-xl py-3 border ${
-                    trabaja === o.v ? "bg-goat-accent text-goat-accent-ink border-goat-accent font-bold" : "border-goat-border"
+                    trabaja === o.v ? "bg-goat-accent-solid text-white border-goat-accent-solid font-bold" : "border-goat-border"
                   }`}
                 >
                   {o.t}
@@ -238,11 +242,26 @@ export default function OnboardingWizard() {
           </h1>
           <div className="flex flex-col gap-3">
             {ordenOpciones[paso.index].map((o) => (
-              <button key={o.letra} onClick={() => responder(o.letra)} className="opcion-btn px-4 py-4 text-left">
+              <button
+                key={o.letra}
+                onClick={() => setOpcionSeleccionada(o.letra)}
+                className={`rounded-xl px-4 py-4 text-left border ${
+                  opcionSeleccionada === o.letra
+                    ? "bg-goat-accent-solid text-white border-goat-accent-solid font-bold"
+                    : "bg-goat-surface-2 border-goat-border"
+                }`}
+              >
                 {o.texto}
               </button>
             ))}
           </div>
+          <button
+            className="btn-primary self-start"
+            disabled={!opcionSeleccionada}
+            onClick={() => responder(opcionSeleccionada!)}
+          >
+            Siguiente
+          </button>
         </div>
       )}
 

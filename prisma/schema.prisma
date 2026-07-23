@@ -63,6 +63,12 @@ model Partida {
   tiempoPromedio Float?
   patronTroll    Boolean @default(false)
 
+  // Motor narrativo con IA (ver ModoGOAT_Prompt_Motor.md): decisión o evento
+  // generado y pendiente de respuesta, para no regenerar contenido distinto
+  // en cada recarga de pantalla.
+  turnoActual Json?
+  analisisFinal String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -80,9 +86,12 @@ model DecisionJugada {
 
   anio            Int
   decisionId      String
+  titulo          String  @default("")
   opcionElegida   String
+  opcionTexto     String  @default("")
   campoLibre      String?
   tiempoRespuesta Float
+  narrativa       String?
 
   ingresoAntes   Int
   ingresoDespues Int
@@ -100,8 +109,11 @@ model EventoJugado {
   anio            Int
   tipoEvento      String // imprevisto | oportunidad
   eventoId        String
+  nombre          String  @default("")
   opcionElegida   String
+  opcionTexto     String  @default("")
   tiempoRespuesta Float
+  narrativa       String?
 
   createdAt DateTime @default(now())
 }
