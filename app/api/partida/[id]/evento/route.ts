@@ -70,13 +70,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const puntosNuevos = sumarPuntos(partida.puntosPerfil as unknown as Puntos, consecuencia.puntosPerfil);
   const perfil = calcularPerfil(puntosNuevos);
 
-  const medallasGanadas = consecuencia.medallaDesbloqueada
-    ? Array.from(new Set([...partida.medallasGanadas, consecuencia.medallaDesbloqueada]))
-    : partida.medallasGanadas;
+  const medallaNueva =
+    consecuencia.medallaDesbloqueada && !partida.medallasGanadas.includes(consecuencia.medallaDesbloqueada)
+      ? consecuencia.medallaDesbloqueada
+      : null;
+  const medallasGanadas = medallaNueva ? Array.from(new Set([...partida.medallasGanadas, medallaNueva])) : partida.medallasGanadas;
   const alertas = consecuencia.alertaGenerada
     ? Array.from(new Set([...partida.alertas, consecuencia.alertaGenerada]))
     : partida.alertas;
-  const mentorActivo = partida.mentorActivo ?? consecuencia.mentorActivado;
+  const mentorNuevo = !partida.mentorActivo && consecuencia.mentorActivado ? consecuencia.mentorActivado : null;
+  const mentorActivo = partida.mentorActivo ?? mentorNuevo;
 
   // Mismo tope de 2 eventos/año que decision/route.ts — siempre se intenta
   // uno si queda cupo, para que el jugador nunca quede solo leyendo texto
@@ -107,7 +110,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         narrativa: consecuencia.narrativa,
         ingresoAntes,
         ingresoDespues,
-        medallaDesbloqueada: consecuencia.medallaDesbloqueada,
+        medallaDesbloqueada: medallaNueva,
       },
     }),
     prisma.partida.update({
@@ -133,5 +136,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     ingresoAntes,
     ingresoDespues,
     skillsModificadas: consecuencia.skillsModificadas,
+    medallaDesbloqueada: medallaNueva,
+    mentorActivado: mentorNuevo,
   });
 }

@@ -229,7 +229,25 @@ async function llamarHerramienta<T>(
   if (!toolUse || toolUse.type !== "tool_use") {
     throw new Error("El motor de IA no devolvió una respuesta estructurada.");
   }
-  return toolUse.input as T;
+  return limpiarValor(toolUse.input) as T;
+}
+
+// A veces el modelo filtra artefactos de su propio formato de tool-call
+// dentro de un campo de texto libre (ej: narrativa termina en
+// "...fin.</narrativa>\n<parameter name=\"ingreso_nuevo\">300000"). El JSON
+// sigue siendo válido — es basura *dentro* del string — así que strict:true
+// no lo agarra. Cortamos en el primer tag sospechoso y nos quedamos con lo
+// que viene antes, que es el contenido real.
+function limpiarValor(valor: unknown): unknown {
+  if (typeof valor === "string") {
+    const corte = valor.search(/<\/?[a-zA-Z_]+(\s+[a-zA-Z_]+="[^"]*")?>/);
+    return corte === -1 ? valor : valor.slice(0, corte).trim();
+  }
+  if (Array.isArray(valor)) return valor.map(limpiarValor);
+  if (valor && typeof valor === "object") {
+    return Object.fromEntries(Object.entries(valor as Record<string, unknown>).map(([k, v]) => [k, limpiarValor(v)]));
+  }
+  return valor;
 }
 
 const LETRAS_VALIDAS = ["A", "B", "C", "D"];

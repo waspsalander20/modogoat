@@ -72,13 +72,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const puntosNuevos = sumarPuntos(partida.puntosPerfil as unknown as Puntos, consecuencia.puntosPerfil);
   const perfil = calcularPerfil(puntosNuevos);
 
-  const medallasGanadas = consecuencia.medallaDesbloqueada
-    ? Array.from(new Set([...partida.medallasGanadas, consecuencia.medallaDesbloqueada]))
-    : partida.medallasGanadas;
+  const medallaNueva =
+    consecuencia.medallaDesbloqueada && !partida.medallasGanadas.includes(consecuencia.medallaDesbloqueada)
+      ? consecuencia.medallaDesbloqueada
+      : null;
+  const medallasGanadas = medallaNueva ? Array.from(new Set([...partida.medallasGanadas, medallaNueva])) : partida.medallasGanadas;
   const alertas = consecuencia.alertaGenerada
     ? Array.from(new Set([...partida.alertas, consecuencia.alertaGenerada]))
     : partida.alertas;
-  const mentorActivo = partida.mentorActivo ?? consecuencia.mentorActivado;
+  const mentorNuevo = !partida.mentorActivo && consecuencia.mentorActivado ? consecuencia.mentorActivado : null;
+  const mentorActivo = partida.mentorActivo ?? mentorNuevo;
 
   // Ritmo del año: hasta 2 eventos (imprevisto/oportunidad) por año, tope fijo
   // decidido localmente (no por la IA) para mantener partidas de duración
@@ -112,7 +115,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         ingresoDespues,
         skillsSubidas: consecuencia.skillsModificadas,
         puntosSumados: consecuencia.puntosPerfil,
-        medallaDesbloqueada: consecuencia.medallaDesbloqueada,
+        medallaDesbloqueada: medallaNueva,
       },
     }),
     prisma.partida.update({
@@ -140,5 +143,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     ingresoAntes,
     ingresoDespues,
     skillsModificadas: consecuencia.skillsModificadas,
+    medallaDesbloqueada: medallaNueva,
+    mentorActivado: mentorNuevo,
   });
 }

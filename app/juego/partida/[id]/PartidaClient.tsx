@@ -7,6 +7,8 @@ import type { DecisionGenerada, EventoGenerado, OpcionGenerada } from "@/lib/aiM
 import type { ResumenAnio } from "@/lib/motor";
 import { formatoPesos, formatoPesosCompacto } from "@/lib/format";
 import { nombreSkill } from "@/lib/data/skills";
+import { medalla } from "@/lib/data/medallas";
+import { mentor } from "@/lib/data/mentores";
 import { usePartidaHeader } from "./PartidaHeaderContext";
 
 interface TurnoResponse {
@@ -21,7 +23,16 @@ type Fase =
   | { tipo: "cargando" }
   | { tipo: "decision"; decision: DecisionGenerada; opcionSeleccionada: string | null; inicio: number }
   | { tipo: "campo_libre"; decision: DecisionGenerada; opcion: OpcionGenerada; inicio: number }
-  | { tipo: "resultado"; narrativa: string; ingresoAntes: number; ingresoDespues: number; skills: Record<string, number>; onContinuar: () => void }
+  | {
+      tipo: "resultado";
+      narrativa: string;
+      ingresoAntes: number;
+      ingresoDespues: number;
+      skills: Record<string, number>;
+      medallaDesbloqueada: string | null;
+      mentorActivado: string | null;
+      onContinuar: () => void;
+    }
   | { tipo: "evento"; evento: EventoGenerado; opcionSeleccionada: string | null; inicio: number }
   | { tipo: "resumen_anio"; anio: number; resumen: ResumenAnio | null }
   | { tipo: "error"; mensaje: string };
@@ -82,6 +93,8 @@ export default function PartidaClient({ partidaId }: { partidaId: string }) {
       ingresoAntes: data.ingresoAntes,
       ingresoDespues: data.ingresoDespues,
       skills: data.skillsModificadas,
+      medallaDesbloqueada: data.medallaDesbloqueada ?? null,
+      mentorActivado: data.mentorActivado ?? null,
       onContinuar: cargarTurno,
     });
   }
@@ -119,6 +132,8 @@ export default function PartidaClient({ partidaId }: { partidaId: string }) {
       ingresoAntes: data.ingresoAntes,
       ingresoDespues: data.ingresoDespues,
       skills: data.skillsModificadas,
+      medallaDesbloqueada: data.medallaDesbloqueada ?? null,
+      mentorActivado: data.mentorActivado ?? null,
       onContinuar: cargarTurno,
     });
   }
@@ -183,6 +198,8 @@ export default function PartidaClient({ partidaId }: { partidaId: string }) {
           ingresoAntes={fase.ingresoAntes}
           ingresoDespues={fase.ingresoDespues}
           skills={fase.skills}
+          medallaDesbloqueada={fase.medallaDesbloqueada}
+          mentorActivado={fase.mentorActivado}
           onContinuar={fase.onContinuar}
         />
       )}
@@ -428,16 +445,22 @@ function ResultadoConsecuencia({
   ingresoAntes,
   ingresoDespues,
   skills,
+  medallaDesbloqueada,
+  mentorActivado,
   onContinuar,
 }: {
   narrativa: string;
   ingresoAntes: number;
   ingresoDespues: number;
   skills: Record<string, number>;
+  medallaDesbloqueada: string | null;
+  mentorActivado: string | null;
   onContinuar: () => void;
 }) {
   const diferencia = ingresoDespues - ingresoAntes;
   const skillsEntries = Object.entries(skills ?? {}).filter(([, v]) => v !== 0);
+  const medallaInfo = medallaDesbloqueada ? medalla(medallaDesbloqueada) : undefined;
+  const mentorInfo = mentorActivado ? mentor(mentorActivado) : undefined;
   return (
     <div className="flex-1 flex flex-col gap-5 px-6 py-8">
       <div className="card p-5">
@@ -445,6 +468,28 @@ function ResultadoConsecuencia({
           <ReactMarkdown>{narrativa}</ReactMarkdown>
         </div>
       </div>
+
+      {mentorInfo && (
+        <div className="rounded-2xl p-4 flex items-center gap-3 bg-gradient-to-br from-[var(--goat-accent-from)] to-[var(--goat-accent-to)]">
+          <span className="text-3xl">{mentorInfo.emoji}</span>
+          <div>
+            <div className="text-[11px] font-extrabold text-white/80 uppercase tracking-wide">Nuevo mentor</div>
+            <div className="text-white font-extrabold">
+              {mentorInfo.nombre} · {mentorInfo.perfil}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {medallaInfo && (
+        <div className="rounded-2xl p-4 flex items-center gap-3 bg-amber-50">
+          <span className="text-3xl">{medallaInfo.emoji}</span>
+          <div>
+            <div className="text-[11px] font-extrabold text-amber-600 uppercase tracking-wide">Medalla desbloqueada</div>
+            <div className="font-extrabold">{medallaInfo.nombre}</div>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col items-center gap-3 text-center">
         {diferencia !== 0 && (
