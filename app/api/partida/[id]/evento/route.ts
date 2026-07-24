@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/lib/generated/prisma/client";
 import { procesarEleccion, generarEvento, type EventoGenerado } from "@/lib/aiMotor";
-import { construirEstadoIA } from "@/lib/estadoIA";
+import { construirEstadoIA, construirInstruccionMentor, construirInstruccionTipoEvento } from "@/lib/estadoIA";
 import { aplicarSkills, sumarPuntos, calcularPerfil } from "@/lib/motor";
 import type { Puntos } from "@/lib/types";
 
@@ -44,14 +44,21 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   ].sort((a, b) => a.anio - b.anio);
   const estadoIA = construirEstadoIA(partida, historial, evento.nombre);
 
+  const totalTurnosPrevios = partida.decisiones.length + partida.eventos.length;
+  const instruccionMentor = construirInstruccionMentor(partida.mentorActivo, totalTurnosPrevios);
+
   let consecuencia;
   try {
-    consecuencia = await procesarEleccion(estadoIA, {
-      titulo: evento.nombre,
-      opcion_elegida: opcion.letra,
-      opcion_texto: opcion.texto,
-      tiempo_respuesta: body.tiempoRespuesta ?? 0,
-    });
+    consecuencia = await procesarEleccion(
+      estadoIA,
+      {
+        titulo: evento.nombre,
+        opcion_elegida: opcion.letra,
+        opcion_texto: opcion.texto,
+        tiempo_respuesta: body.tiempoRespuesta ?? 0,
+      },
+      instruccionMentor
+    );
   } catch (error) {
     console.error("Error procesando evento con IA:", error);
     return NextResponse.json({ error: "No pudimos continuar tu historia. Intenta de nuevo." }, { status: 502 });
@@ -78,7 +85,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   let nuevoTurno = null;
   if (eventosEsteAnio < 2) {
     try {
-      const siguienteEvento = await generarEvento(estadoIA);
+      const tiposConEsteEvento = [...partida.eventos, { tipoEvento: evento.tipo }];
+      const siguienteEvento = await generarEvento(estadoIA, construirInstruccionTipoEvento(tiposConEsteEvento));
       nuevoTurno = { tipo: "evento" as const, evento: siguienteEvento };
     } catch (error) {
       console.error("Error generando siguiente evento con IA:", error);

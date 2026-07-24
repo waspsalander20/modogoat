@@ -52,3 +52,27 @@ export function construirEstadoIA(
     })),
   };
 }
+
+// Sin esto, mentor_activado queda 100% a discreción de la IA y en la
+// práctica casi nunca aparece — se fuerza a partir de cierto punto para
+// que el jugador siempre vea al menos un mentor en la partida.
+export function construirInstruccionMentor(mentorActivo: string | null, totalTurnos: number): string | undefined {
+  if (mentorActivo) return undefined;
+  if (totalTurnos >= 4) {
+    return "El jugador todavía no tiene mentor activo después de varios turnos. DEBES introducir un mentor esta vez a través de mentor_activado (elige el que mejor encaje con el contexto: andrea, carlos, valentina, sebastian, luna, o don_jairo si viene de una racha negativa) — que se sienta orgánico dentro de la narrativa, no forzado ni anunciado.";
+  }
+  if (totalTurnos >= 2) {
+    return "Si surge naturalmente en la narrativa, aprovecha para introducir un mentor (mentor_activado) — el jugador todavía no tiene ninguno.";
+  }
+  return undefined;
+}
+
+// El tipo de evento (imprevisto/oportunidad) queda a discreción de la IA;
+// sin esto, una partida puede tocar 3 oportunidades seguidas por azar. Se
+// fuerza localmente el tipo con menos apariciones hasta ahora.
+export function construirInstruccionTipoEvento(eventos: Array<{ tipoEvento: string }>): string {
+  const oportunidades = eventos.filter((e) => e.tipoEvento === "oportunidad").length;
+  const imprevistos = eventos.filter((e) => e.tipoEvento === "imprevisto").length;
+  const tipo = oportunidades <= imprevistos ? "oportunidad" : "imprevisto";
+  return `Este evento DEBE ser de tipo "${tipo}" (campo tipo = "${tipo}").`;
+}

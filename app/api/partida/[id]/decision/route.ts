@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/lib/generated/prisma/client";
 import { procesarEleccion, generarEvento, type DecisionGenerada } from "@/lib/aiMotor";
-import { construirEstadoIA } from "@/lib/estadoIA";
+import { construirEstadoIA, construirInstruccionMentor, construirInstruccionTipoEvento } from "@/lib/estadoIA";
 import { aplicarSkills, sumarPuntos, calcularPerfil } from "@/lib/motor";
 import type { Puntos } from "@/lib/types";
 
@@ -45,15 +45,22 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   ].sort((a, b) => a.anio - b.anio);
   const estadoIA = construirEstadoIA(partida, historial, null);
 
+  const totalTurnosPrevios = partida.decisiones.length + partida.eventos.length;
+  const instruccionMentor = construirInstruccionMentor(partida.mentorActivo, totalTurnosPrevios);
+
   let consecuencia;
   try {
-    consecuencia = await procesarEleccion(estadoIA, {
-      titulo: decision.titulo,
-      opcion_elegida: opcion.letra,
-      opcion_texto: opcion.titulo,
-      campo_libre: body.campoLibre,
-      tiempo_respuesta: body.tiempoRespuesta ?? 0,
-    });
+    consecuencia = await procesarEleccion(
+      estadoIA,
+      {
+        titulo: decision.titulo,
+        opcion_elegida: opcion.letra,
+        opcion_texto: opcion.titulo,
+        campo_libre: body.campoLibre,
+        tiempo_respuesta: body.tiempoRespuesta ?? 0,
+      },
+      instruccionMentor
+    );
   } catch (error) {
     console.error("Error procesando decisión con IA:", error);
     return NextResponse.json({ error: "No pudimos continuar tu historia. Intenta de nuevo." }, { status: 502 });
@@ -81,7 +88,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   let nuevoTurno = null;
   if (eventosEsteAnio < 2) {
     try {
-      const evento = await generarEvento(estadoIA);
+      const evento = await generarEvento(estadoIA, construirInstruccionTipoEvento(partida.eventos));
       nuevoTurno = { tipo: "evento" as const, evento };
     } catch (error) {
       console.error("Error generando evento con IA:", error);

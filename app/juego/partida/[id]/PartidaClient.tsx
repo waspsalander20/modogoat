@@ -483,47 +483,44 @@ function EventoCard({
   onConfirmar: () => void;
 }) {
   const esImprevisto = evento.tipo === "imprevisto";
+  const colorOpcion = ["bg-emerald-500", "bg-sky-500", "bg-amber-500", "bg-violet-500"];
+
   return (
-    <div className="flex flex-col gap-5 flex-1 px-5 py-6">
-      <div className="card p-5">
-        <div
-          className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mb-3 ${
-            esImprevisto ? "bg-goat-bad-bg" : "bg-goat-good-bg"
-          }`}
-        >
-          {evento.emoji}
-        </div>
-        <div
-          className={`text-xs font-extrabold uppercase tracking-wide mb-1 ${
-            esImprevisto ? "text-goat-bad" : "text-goat-good-text"
-          }`}
-        >
-          {esImprevisto ? "Imprevisto" : "Oportunidad"}
-        </div>
-        <h2 className="text-lg font-extrabold mb-1">{evento.nombre}</h2>
-        <div className="prose-narrativa text-goat-ink-muted text-sm">
+    <div className="flex flex-col flex-1">
+      <div className={`px-6 py-8 text-center flex flex-col items-center gap-3 ${esImprevisto ? "bg-red-600" : "bg-emerald-600"}`}>
+        <span className="inline-flex items-center gap-1.5 bg-white/20 text-white text-xs font-extrabold uppercase tracking-wide px-3 py-1.5 rounded-full">
+          {esImprevisto ? "⚡" : "🌟"} {esImprevisto ? "Imprevisto" : "Oportunidad"}
+        </span>
+        <div className="text-5xl">{evento.emoji}</div>
+        <div className="prose-narrativa font-extrabold text-lg leading-snug [&_p]:!text-white [&_strong]:!text-white [&_blockquote]:!text-white/90 [&_blockquote]:!border-white/50">
           <ReactMarkdown>{evento.texto}</ReactMarkdown>
         </div>
+        <p className="text-white/80 text-sm font-bold">¿Qué hace tu personaje?</p>
       </div>
 
-      <div className="flex flex-col gap-3">
-        {evento.opciones.map((o) => (
-          <button
-            key={o.letra}
-            onClick={() => onSeleccionar(o.letra)}
-            className={`opcion-btn p-4 flex items-start gap-3 ${
-              opcionSeleccionada === o.letra ? "seleccionada border-goat-accent-solid" : ""
-            }`}
-          >
-            <span className="badge-letra">{o.letra}</span>
-            <span className="flex-1 text-left">{o.texto}</span>
-          </button>
-        ))}
-      </div>
+      <div className="flex flex-col gap-3 px-5 py-6 flex-1">
+        <div className="flex flex-col gap-3">
+          {evento.opciones.map((o, i) => {
+            const seleccionada = opcionSeleccionada === o.letra;
+            return (
+              <button
+                key={o.letra}
+                onClick={() => onSeleccionar(o.letra)}
+                className={`${colorOpcion[i % colorOpcion.length]} rounded-2xl p-4 flex items-center gap-3 text-left transition-transform ${
+                  seleccionada ? "ring-4 ring-offset-2 ring-goat-ink scale-[1.02]" : ""
+                }`}
+              >
+                <span className="text-2xl">{o.emoji}</span>
+                <span className="flex-1 text-white font-bold">{o.texto}</span>
+              </button>
+            );
+          })}
+        </div>
 
-      <button className="btn-primary" disabled={!opcionSeleccionada} onClick={onConfirmar}>
-        {opcionSeleccionada ? "Continuar" : "Elige una opción para continuar"}
-      </button>
+        <button className="btn-primary mt-1" disabled={!opcionSeleccionada} onClick={onConfirmar}>
+          {opcionSeleccionada ? "Continuar" : "Elige una opción para continuar"}
+        </button>
+      </div>
     </div>
   );
 }

@@ -27,6 +27,8 @@ REGLAS NARRATIVAS OBLIGATORIAS
 
 3. Las opciones SIEMPRE tienen orden rotatorio — nunca pongas la "mejor" opción siempre en el mismo lugar. El jugador no debe poder adivinar la respuesta correcta por posición.
 
+3b. Opciones trampa — en las 4 opciones de cada evento o decisión, al menos una debe ser una opción tentadora pero mala: la fácil, la cómoda, la que evita el problema, la graciosa-pero-irresponsable (ej: "Dos tintos y a morir" ante una reunión importante después de rumbear). No la marques como mala en el texto — que se sienta tan válida como las demás, el jugador solo lo descubre en la consecuencia. Esto es lo que hace que elegir se sienta real y no un cuestionario con respuesta obvia.
+
 4. Coherencia con el historial — revisa las últimas decisiones antes de narrar. Si eligió siempre opciones de bajo riesgo, los imprevistos son más benignos pero hay costo de oportunidad acumulado. Si eligió siempre colaborar, tiene una red más fuerte disponible. Si rechazó oportunidades, algunas vuelven con condiciones diferentes.
 
 5. Nunca pierde — el jugador SIEMPRE llega al año 30. Los resultados bajos tienen mensajes motivacionales, no castigos. El juego acompaña, no juzga.
@@ -119,7 +121,7 @@ export interface EventoGenerado {
   nombre: string;
   emoji: string;
   texto: string;
-  opciones: Array<{ letra: "A" | "B" | "C" | "D"; texto: string }>;
+  opciones: Array<{ letra: "A" | "B" | "C" | "D"; emoji: string; texto: string }>;
 }
 
 export interface ConsecuenciaGenerada {
@@ -179,9 +181,10 @@ const EVENTO_SCHEMA = {
         additionalProperties: false,
         properties: {
           letra: { type: "string", enum: ["A", "B", "C", "D"] },
+          emoji: { type: "string", description: "Un solo emoji representativo" },
           texto: { type: "string" },
         },
-        required: ["letra", "texto"],
+        required: ["letra", "emoji", "texto"],
       },
     },
   },
@@ -265,8 +268,10 @@ export async function generarDecisionDeAnio(estado: EstadoIA): Promise<DecisionG
   };
 }
 
-export async function generarEvento(estado: EstadoIA): Promise<EventoGenerado> {
-  const evento = await llamarHerramienta<EventoGenerado>("generar_evento", estado, "presentar_evento", EVENTO_SCHEMA);
+export async function generarEvento(estado: EstadoIA, instruccionAdicional?: string): Promise<EventoGenerado> {
+  const evento = await llamarHerramienta<EventoGenerado>("generar_evento", estado, "presentar_evento", EVENTO_SCHEMA, {
+    instruccion_adicional: instruccionAdicional,
+  });
   validarOpciones(evento.opciones);
   return evento;
 }
@@ -279,7 +284,8 @@ export async function procesarEleccion(
     opcion_texto: string;
     campo_libre?: string;
     tiempo_respuesta: number;
-  }
+  },
+  instruccionAdicional?: string
 ): Promise<ConsecuenciaGenerada> {
   const schema = {
     type: "object",
@@ -337,6 +343,7 @@ export async function procesarEleccion(
     alerta_generada: string | null;
   }>("generar_consecuencia", estado, "procesar_turno", schema, {
     decision_tomada: decisionTomada,
+    instruccion_adicional: instruccionAdicional,
   });
 
   const skillsModificadas: Record<string, number> = {};
