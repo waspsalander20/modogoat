@@ -98,6 +98,7 @@ model DecisionJugada {
   skillsSubidas       Json
   puntosSumados       Json
   medallaDesbloqueada String?
+  costoOportunidad    String?
 
   createdAt DateTime @default(now())
 }
@@ -119,6 +120,7 @@ model EventoJugado {
   ingresoAntes        Int?
   ingresoDespues      Int?
   medallaDesbloqueada String?
+  costoOportunidad    String?
 
   createdAt DateTime @default(now())
 }

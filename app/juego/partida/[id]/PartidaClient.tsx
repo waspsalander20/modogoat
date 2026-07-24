@@ -278,9 +278,12 @@ function ResumenAnioView({
           )}
 
           {resumen.oportunidadPerdida && (
-            <div className="card p-3 flex items-center gap-3 bg-goat-bad-bg border-none">
-              <span className="text-xl">❌</span>
-              <span className="text-sm font-bold flex-1">{resumen.oportunidadPerdida}</span>
+            <div className="rounded-2xl p-4 bg-goat-bad-bg">
+              <div className="text-[11px] font-extrabold text-goat-bad uppercase tracking-wide mb-1">Costo de oportunidad</div>
+              <div className="flex items-start gap-3">
+                <span className="text-xl">❌</span>
+                <p className="text-sm font-bold flex-1">{resumen.oportunidadPerdida}</p>
+              </div>
             </div>
           )}
 

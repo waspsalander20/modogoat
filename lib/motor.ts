@@ -107,6 +107,7 @@ interface ItemAnio {
   ingresoAntes: number | null;
   ingresoDespues: number | null;
   medallaDesbloqueada: string | null;
+  costoOportunidad: string | null;
 }
 
 export function calcularResumenAnio(
@@ -137,23 +138,18 @@ export function calcularResumenAnio(
   const skillsCount = Object.values(skills).filter((v) => v > 0).length;
   const medallasEsteAnio = items.map((i) => i.medallaDesbloqueada).filter((m): m is string => !!m);
 
-  // Costo de oportunidad: qué tanto le cuesta al mes no tener inglés B2+.
-  let oportunidadPerdida: string | null = null;
-  const nivelIngles = skills.ingles ?? 0;
-  if (nivelIngles < 4) {
-    const actual = calcularSalarioProyectado(perfilDominante, skills);
-    const conIngles = calcularSalarioProyectado(perfilDominante, { ...skills, ingles: 4 });
-    const diferenciaAnual = (conIngles - actual) * 12;
-    if (diferenciaAnual > 1_000_000) {
-      oportunidadPerdida = `Perdiste ${formatoPesosCompacto(diferenciaAnual)} al año por no tener inglés B2+`;
-    }
-  }
+  // Costo de oportunidad real de este año — lo marca la IA cuando una
+  // elección concreta hizo perder confianza, una oportunidad o plata (ver
+  // costo_oportunidad en aiMotor.ts). Si ninguna elección tuvo un costo así
+  // de específico, no se muestra nada — no se inventa uno genérico.
+  const oportunidadPerdida = items.find((i) => i.costoOportunidad)?.costoOportunidad ?? null;
 
   // Mejor movimiento posible: probar inglés a B2 y cada skill actual llevada
   // a nivel 5, quedarse con la que más sube el salario proyectado.
   const actual = calcularSalarioProyectado(perfilDominante, skills);
   let mejorNombre: string | null = null;
   let mejorProyeccion = actual;
+  const nivelIngles = skills.ingles ?? 0;
 
   if (nivelIngles < 4) {
     const proyeccion = calcularSalarioProyectado(perfilDominante, { ...skills, ingles: 4 });

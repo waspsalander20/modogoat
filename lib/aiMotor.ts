@@ -78,6 +78,8 @@ mentor_activado — solo si la narrativa introduce a un mentor por primera vez, 
 
 alerta_generada — solo si aplica claramente, si no, null: barrera_familiar, barrera_economica, perfil_riesgo, explorador_vocacional.
 
+costo_oportunidad — solo si ESTA elección específica hizo que el jugador perdiera algo real y notorio (confianza de alguien, una oportunidad concreta que no vuelve, plata dejada en la mesa), en una frase corta que explique QUÉ se perdió y POR QUÉ fue esa elección la causa (ej: "Por elegir cobrar de una sin negociar, perdiste la confianza del cliente antes de empezar" o "Al rechazar la oferta de la marca, perdiste $400.000 que ya tenías casi asegurados"). Si esta elección no tuvo un costo real y específico, null — no lo inventes solo por rellenar el campo.
+
 skills — usa nombres en camelCase de esta lista cuando corresponda (puedes usar otros si el contexto lo amerita, pero prefiere estos): ingles, comunicacion, finanzasPersonales, saludMental, disciplina, networking, adaptabilidad, ventas, marketingDigital, gestionEquipos, toleranciaRiesgo, trabajoEquipo, negociacion, gestionProyectos, presentaciones, programacion, diseno, analisisDatos, produccionContenido, empatiaClinica, investigacion, comunicacionAsertiva, tecnologiaMedica, narrativa, marcaPersonal, produccionAudiovisual, distribucionDigital, liderazgo.
 
 Vas a recibir el estado actual de la partida en JSON y una acción a ejecutar. Responde siempre usando la herramienta indicada — nunca como texto libre fuera de la herramienta.`;
@@ -132,6 +134,7 @@ export interface ConsecuenciaGenerada {
   medallaDesbloqueada: string | null;
   mentorActivado: string | null;
   alertaGenerada: string | null;
+  costoOportunidad: string | null;
 }
 
 // strict:true no soporta minItems/maxItems distintos de 0 o 1 — la cantidad
@@ -339,6 +342,10 @@ export async function procesarEleccion(
       medalla_desbloqueada: { type: ["string", "null"] },
       mentor_activado: { type: ["string", "null"] },
       alerta_generada: { type: ["string", "null"] },
+      costo_oportunidad: {
+        type: ["string", "null"],
+        description: "Frase corta: qué se perdió (confianza, una oportunidad, plata) y por qué esta elección lo causó. Null si no hubo un costo real y específico.",
+      },
     },
     required: [
       "narrativa",
@@ -348,6 +355,7 @@ export async function procesarEleccion(
       "medalla_desbloqueada",
       "mentor_activado",
       "alerta_generada",
+      "costo_oportunidad",
     ],
   };
 
@@ -359,6 +367,7 @@ export async function procesarEleccion(
     medalla_desbloqueada: string | null;
     mentor_activado: string | null;
     alerta_generada: string | null;
+    costo_oportunidad: string | null;
   }>("generar_consecuencia", estado, "procesar_turno", schema, {
     decision_tomada: decisionTomada,
     instruccion_adicional: instruccionAdicional,
@@ -377,6 +386,7 @@ export async function procesarEleccion(
     medallaDesbloqueada: raw.medalla_desbloqueada,
     mentorActivado: raw.mentor_activado,
     alertaGenerada: raw.alerta_generada,
+    costoOportunidad: raw.costo_oportunidad,
   };
 }
 

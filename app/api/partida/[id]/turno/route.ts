@@ -44,6 +44,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
           ingresoAntes: d.ingresoAntes,
           ingresoDespues: d.ingresoDespues,
           medallaDesbloqueada: d.medallaDesbloqueada,
+          costoOportunidad: d.costoOportunidad,
         })),
       ...partida.eventos
         .filter((e) => e.anio === partida.edadActual)
@@ -52,6 +53,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
           ingresoAntes: e.ingresoAntes,
           ingresoDespues: e.ingresoDespues,
           medallaDesbloqueada: e.medallaDesbloqueada,
+          costoOportunidad: e.costoOportunidad,
         })),
     ];
     const primeraDecisionEsteAnio = partida.decisiones.find((d) => d.anio === partida.edadActual);
