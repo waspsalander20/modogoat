@@ -93,10 +93,11 @@ model DecisionJugada {
   tiempoRespuesta Float
   narrativa       String?
 
-  ingresoAntes   Int
-  ingresoDespues Int
-  skillsSubidas  Json
-  puntosSumados  Json
+  ingresoAntes        Int
+  ingresoDespues      Int
+  skillsSubidas       Json
+  puntosSumados       Json
+  medallaDesbloqueada String?
 
   createdAt DateTime @default(now())
 }
@@ -114,6 +115,10 @@ model EventoJugado {
   opcionTexto     String  @default("")
   tiempoRespuesta Float
   narrativa       String?
+
+  ingresoAntes        Int?
+  ingresoDespues      Int?
+  medallaDesbloqueada String?
 
   createdAt DateTime @default(now())
 }

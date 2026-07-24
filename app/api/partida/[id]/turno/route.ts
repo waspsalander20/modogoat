@@ -3,6 +3,10 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { generarDecisionDeAnio } from "@/lib/aiMotor";
 import { construirEstadoIA } from "@/lib/estadoIA";
+import { calcularResumenAnio } from "@/lib/motor";
+import { nombreSkill } from "@/lib/data/skills";
+import { medalla } from "@/lib/data/medallas";
+import type { PerfilId } from "@/lib/types";
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -32,7 +36,36 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   if (yaDecidioEsteAnio) {
     // Ya se resolvió la decisión principal (y sus eventos) de este año — el
     // cliente debe cerrar el año (fin-anio) en vez de recibir otra decisión.
-    return NextResponse.json({ terminado: false, anio: partida.edadActual, turno: null });
+    const itemsEsteAnio = [
+      ...partida.decisiones
+        .filter((d) => d.anio === partida.edadActual)
+        .map((d) => ({
+          opcionTexto: d.opcionTexto,
+          ingresoAntes: d.ingresoAntes,
+          ingresoDespues: d.ingresoDespues,
+          medallaDesbloqueada: d.medallaDesbloqueada,
+        })),
+      ...partida.eventos
+        .filter((e) => e.anio === partida.edadActual)
+        .map((e) => ({
+          opcionTexto: e.opcionTexto,
+          ingresoAntes: e.ingresoAntes,
+          ingresoDespues: e.ingresoDespues,
+          medallaDesbloqueada: e.medallaDesbloqueada,
+        })),
+    ];
+    const primeraDecisionEsteAnio = partida.decisiones.find((d) => d.anio === partida.edadActual);
+    const ingresoInicioAnio = primeraDecisionEsteAnio?.ingresoAntes ?? partida.ingresoActual;
+    const resumen = calcularResumenAnio(
+      itemsEsteAnio,
+      ingresoInicioAnio,
+      partida.ingresoActual,
+      partida.skills as Record<string, number>,
+      (partida.perfilDominante as PerfilId) ?? "EMP",
+      nombreSkill,
+      (id) => medalla(id)?.nombre
+    );
+    return NextResponse.json({ terminado: false, anio: partida.edadActual, turno: null, resumen });
   }
 
   // No hay turno pendiente: generamos la decisión principal del año.

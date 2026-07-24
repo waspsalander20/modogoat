@@ -105,6 +105,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         ingresoDespues,
         skillsSubidas: consecuencia.skillsModificadas,
         puntosSumados: consecuencia.puntosPerfil,
+        medallaDesbloqueada: consecuencia.medallaDesbloqueada,
       },
     }),
     prisma.partida.update({

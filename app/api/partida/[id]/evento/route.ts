@@ -97,6 +97,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         opcionTexto: opcion.texto,
         tiempoRespuesta: body.tiempoRespuesta ?? 0,
         narrativa: consecuencia.narrativa,
+        ingresoAntes,
+        ingresoDespues,
+        medallaDesbloqueada: consecuencia.medallaDesbloqueada,
       },
     }),
     prisma.partida.update({

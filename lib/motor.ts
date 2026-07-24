@@ -1,6 +1,7 @@
 import type { EstadoPartida, PerfilId, Puntos } from "@/lib/types";
 import { SALARIOS_BASE } from "@/lib/data/salarios";
 import { calcularPerfil } from "@/lib/perfilamiento";
+import { formatoPesosCompacto } from "@/lib/format";
 
 export function calcularGastos(edad: number): number {
   if (edad <= 18) return 0.0;
@@ -85,6 +86,104 @@ export function elegirMedallasGanadas(estado: EstadoPartida, resultado: TipoResu
   if (resultado === "goat") medallas.add("goat_mode");
 
   return Array.from(medallas);
+}
+
+export interface ResumenHighlight {
+  icono: string;
+  texto: string;
+}
+
+export interface ResumenAnio {
+  ingresoGanado: number;
+  skillsCount: number;
+  medallasEsteAnio: string[];
+  highlights: ResumenHighlight[];
+  oportunidadPerdida: string | null;
+  mejorMovimiento: string | null;
+}
+
+interface ItemAnio {
+  opcionTexto: string;
+  ingresoAntes: number | null;
+  ingresoDespues: number | null;
+  medallaDesbloqueada: string | null;
+}
+
+export function calcularResumenAnio(
+  items: ItemAnio[],
+  ingresoInicioAnio: number,
+  ingresoActual: number,
+  skills: Record<string, number>,
+  perfilDominante: PerfilId,
+  nombreSkillFn: (id: string) => string,
+  nombreMedallaFn: (id: string) => string | undefined
+): ResumenAnio {
+  const highlights: ResumenHighlight[] = [];
+
+  for (const item of items) {
+    if (item.medallaDesbloqueada) {
+      const nombre = nombreMedallaFn(item.medallaDesbloqueada);
+      if (nombre) highlights.push({ icono: "🏅", texto: `Desbloqueaste ${nombre}` });
+    }
+    if (item.ingresoAntes !== null && item.ingresoDespues !== null) {
+      if (item.ingresoDespues > item.ingresoAntes) {
+        highlights.push({ icono: "✅", texto: item.opcionTexto });
+      } else if (item.ingresoDespues < item.ingresoAntes) {
+        highlights.push({ icono: "⚠️", texto: item.opcionTexto });
+      }
+    }
+  }
+
+  const skillsCount = Object.values(skills).filter((v) => v > 0).length;
+  const medallasEsteAnio = items.map((i) => i.medallaDesbloqueada).filter((m): m is string => !!m);
+
+  // Costo de oportunidad: qué tanto le cuesta al mes no tener inglés B2+.
+  let oportunidadPerdida: string | null = null;
+  const nivelIngles = skills.ingles ?? 0;
+  if (nivelIngles < 4) {
+    const actual = calcularSalarioProyectado(perfilDominante, skills);
+    const conIngles = calcularSalarioProyectado(perfilDominante, { ...skills, ingles: 4 });
+    const diferenciaAnual = (conIngles - actual) * 12;
+    if (diferenciaAnual > 1_000_000) {
+      oportunidadPerdida = `Perdiste ${formatoPesosCompacto(diferenciaAnual)} al año por no tener inglés B2+`;
+    }
+  }
+
+  // Mejor movimiento posible: probar inglés a B2 y cada skill actual llevada
+  // a nivel 5, quedarse con la que más sube el salario proyectado.
+  const actual = calcularSalarioProyectado(perfilDominante, skills);
+  let mejorNombre: string | null = null;
+  let mejorProyeccion = actual;
+
+  if (nivelIngles < 4) {
+    const proyeccion = calcularSalarioProyectado(perfilDominante, { ...skills, ingles: 4 });
+    if (proyeccion > mejorProyeccion) {
+      mejorProyeccion = proyeccion;
+      mejorNombre = "inglés a B2";
+    }
+  }
+  for (const [skillId, nivel] of Object.entries(skills)) {
+    if (skillId === "ingles" || nivel >= 5) continue;
+    const proyeccion = calcularSalarioProyectado(perfilDominante, { ...skills, [skillId]: 5 });
+    if (proyeccion > mejorProyeccion) {
+      mejorProyeccion = proyeccion;
+      mejorNombre = nombreSkillFn(skillId);
+    }
+  }
+
+  const mejorMovimiento =
+    mejorNombre && mejorProyeccion > actual
+      ? `Sube tu ${mejorNombre} y tu salario proyectado pasa de ${formatoPesosCompacto(actual)} a ${formatoPesosCompacto(mejorProyeccion)} al mes.`
+      : null;
+
+  return {
+    ingresoGanado: ingresoActual - ingresoInicioAnio,
+    skillsCount,
+    medallasEsteAnio,
+    highlights,
+    oportunidadPerdida,
+    mejorMovimiento,
+  };
 }
 
 export { calcularPerfil };

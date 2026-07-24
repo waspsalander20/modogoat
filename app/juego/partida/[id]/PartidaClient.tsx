@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import type { DecisionGenerada, EventoGenerado, OpcionGenerada } from "@/lib/aiMotor";
-import { formatoPesos } from "@/lib/format";
+import type { ResumenAnio } from "@/lib/motor";
+import { formatoPesos, formatoPesosCompacto } from "@/lib/format";
 import { nombreSkill } from "@/lib/data/skills";
 import { usePartidaHeader } from "./PartidaHeaderContext";
 
@@ -12,6 +13,7 @@ interface TurnoResponse {
   terminado: boolean;
   anio?: number;
   turno?: { tipo: "decision"; decision: DecisionGenerada } | { tipo: "evento"; evento: EventoGenerado } | null;
+  resumen?: ResumenAnio | null;
   error?: string;
 }
 
@@ -21,7 +23,7 @@ type Fase =
   | { tipo: "campo_libre"; decision: DecisionGenerada; opcion: OpcionGenerada; inicio: number }
   | { tipo: "resultado"; narrativa: string; ingresoAntes: number; ingresoDespues: number; skills: Record<string, number>; onContinuar: () => void }
   | { tipo: "evento"; evento: EventoGenerado; opcionSeleccionada: string | null; inicio: number }
-  | { tipo: "resumen_anio"; anio: number }
+  | { tipo: "resumen_anio"; anio: number; resumen: ResumenAnio | null }
   | { tipo: "error"; mensaje: string };
 
 export default function PartidaClient({ partidaId }: { partidaId: string }) {
@@ -48,7 +50,7 @@ export default function PartidaClient({ partidaId }: { partidaId: string }) {
     } else if (data.turno?.tipo === "evento") {
       setFase({ tipo: "evento", evento: data.turno.evento, opcionSeleccionada: null, inicio: Date.now() });
     } else {
-      setFase({ tipo: "resumen_anio", anio: data.anio ?? 0 });
+      setFase({ tipo: "resumen_anio", anio: data.anio ?? 0, resumen: data.resumen ?? null });
     }
   }, [partidaId, router]);
 
@@ -199,18 +201,87 @@ export default function PartidaClient({ partidaId }: { partidaId: string }) {
       )}
 
       {fase.tipo === "resumen_anio" && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-6 text-center px-6">
-          <div className="text-5xl">📅</div>
-          <h2 className="text-xl font-extrabold">Cerraste el año {fase.anio}</h2>
-          <p className="text-goat-ink-muted text-sm max-w-xs">
-            {datos ? `Ingreso actual: ${formatoPesos(datos.ingresoActual)}/mes` : ""}
-          </p>
-          <button className="btn-primary" onClick={finalizarAnio}>
-            Siguiente año →
-          </button>
-        </div>
+        <ResumenAnioView anio={fase.anio} resumen={fase.resumen} nombre={datos?.nombre} onContinuar={finalizarAnio} />
       )}
     </main>
+  );
+}
+
+function ResumenAnioView({
+  anio,
+  resumen,
+  nombre,
+  onContinuar,
+}: {
+  anio: number;
+  resumen: ResumenAnio | null;
+  nombre?: string;
+  onContinuar: () => void;
+}) {
+  return (
+    <div className="flex-1 flex flex-col gap-5 px-5 py-6">
+      <div className="text-center">
+        <div className="text-5xl mb-2">🎂</div>
+        <div className="text-xs font-extrabold text-goat-ink-muted uppercase tracking-wide mb-1">Resumen del año</div>
+        <h2 className="text-3xl font-extrabold mb-1">{anio}</h2>
+        {nombre && <p className="text-goat-ink-muted text-sm">Cerraste el año, {nombre}</p>}
+      </div>
+
+      {resumen && (
+        <>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-2xl p-3 text-center bg-goat-good-bg">
+              <div className="font-extrabold text-goat-good-text">
+                {resumen.ingresoGanado >= 0 ? "+" : ""}
+                {formatoPesosCompacto(resumen.ingresoGanado)}
+              </div>
+              <div className="text-[11px] text-goat-ink-muted mt-0.5">Ingreso</div>
+            </div>
+            <div className="rounded-2xl p-3 text-center bg-goat-accent-tint">
+              <div className="font-extrabold text-goat-accent-solid">{resumen.skillsCount}</div>
+              <div className="text-[11px] text-goat-ink-muted mt-0.5">Skills</div>
+            </div>
+            <div className="rounded-2xl p-3 text-center bg-amber-50">
+              <div className="font-extrabold text-amber-600">{resumen.medallasEsteAnio.length}</div>
+              <div className="text-[11px] text-goat-ink-muted mt-0.5">
+                Medalla{resumen.medallasEsteAnio.length === 1 ? "" : "s"}
+              </div>
+            </div>
+          </div>
+
+          {resumen.highlights.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {resumen.highlights.map((h, i) => (
+                <div key={i} className="card p-3 flex items-center gap-3">
+                  <span className="text-xl">{h.icono}</span>
+                  <span className="text-sm font-bold flex-1">{h.texto}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {resumen.oportunidadPerdida && (
+            <div className="card p-3 flex items-center gap-3 bg-goat-bad-bg border-none">
+              <span className="text-xl">❌</span>
+              <span className="text-sm font-bold flex-1">{resumen.oportunidadPerdida}</span>
+            </div>
+          )}
+
+          {resumen.mejorMovimiento && (
+            <div className="rounded-2xl p-4 bg-gradient-to-br from-[var(--goat-accent-from)] to-[var(--goat-accent-to)]">
+              <div className="text-[11px] font-extrabold text-white/80 uppercase tracking-wide mb-1">
+                Si haces una sola cosa el año {anio + 1}
+              </div>
+              <p className="text-white font-bold text-sm">{resumen.mejorMovimiento}</p>
+            </div>
+          )}
+        </>
+      )}
+
+      <button className="btn-primary mt-1" onClick={onContinuar}>
+        Arrancar el año {anio + 1} 🚀
+      </button>
+    </div>
   );
 }
 
