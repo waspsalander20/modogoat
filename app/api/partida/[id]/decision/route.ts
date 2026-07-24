@@ -73,12 +73,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     : partida.alertas;
   const mentorActivo = partida.mentorActivo ?? consecuencia.mentorActivado;
 
-  // Ritmo del año: hasta 2 eventos (imprevisto/oportunidad) decididos localmente,
-  // no por la IA, para mantener partidas de duración predecible.
+  // Ritmo del año: hasta 2 eventos (imprevisto/oportunidad) por año, tope fijo
+  // decidido localmente (no por la IA) para mantener partidas de duración
+  // predecible. Siempre se genera uno si queda cupo — el jugador nunca debe
+  // quedarse solo leyendo una consecuencia sin una decisión inmediata después.
   const eventosEsteAnio = partida.eventos.filter((e) => e.anio === partida.edadActual).length;
   let nuevoTurno = null;
-  const probabilidad = eventosEsteAnio === 0 ? 0.7 : eventosEsteAnio === 1 ? 0.3 : 0;
-  if (Math.random() < probabilidad) {
+  if (eventosEsteAnio < 2) {
     try {
       const evento = await generarEvento(estadoIA);
       nuevoTurno = { tipo: "evento" as const, evento };

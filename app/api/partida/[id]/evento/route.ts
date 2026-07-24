@@ -71,9 +71,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     : partida.alertas;
   const mentorActivo = partida.mentorActivo ?? consecuencia.mentorActivado;
 
+  // Mismo tope de 2 eventos/año que decision/route.ts — siempre se intenta
+  // uno si queda cupo, para que el jugador nunca quede solo leyendo texto
+  // sin una decisión inmediata después.
   const eventosEsteAnio = partida.eventos.filter((e) => e.anio === partida.edadActual).length + 1;
   let nuevoTurno = null;
-  if (eventosEsteAnio < 2 && Math.random() < 0.3) {
+  if (eventosEsteAnio < 2) {
     try {
       const siguienteEvento = await generarEvento(estadoIA);
       nuevoTurno = { tipo: "evento" as const, evento: siguienteEvento };
