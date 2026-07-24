@@ -87,6 +87,13 @@ export default function PartidaClient({ partidaId }: { partidaId: string }) {
     }
     const data = await res.json();
     refrescar();
+    if (data.turno?.tipo === "decision") {
+      // Caso especial: la decisión inicial (con área libre) no se resuelve
+      // directo a una consecuencia — genera una segunda decisión real sobre
+      // cómo arrancar en esa área, para que el jugador vuelva a elegir.
+      setFase({ tipo: "decision", decision: data.turno.decision, opcionSeleccionada: null, inicio: Date.now() });
+      return;
+    }
     setFase({
       tipo: "resultado",
       narrativa: data.narrativa,

@@ -32,6 +32,18 @@ export function sumarPuntos(actuales: Puntos, nuevos: Puntos): Puntos {
   };
 }
 
+// Skills con más peso salarial según el perfil dominante — sin esto, inglés
+// es la única skill con un multiplicador propio y "mejor movimiento" en
+// calcularResumenAnio siempre termina recomendando lo mismo sin importar el
+// área del jugador.
+const SKILLS_CLAVE_POR_PERFIL: Record<PerfilId, string[]> = {
+  EMP: ["liderazgo", "gestionEquipos"],
+  INV: ["investigacion", "analisisDatos"],
+  EMP2: ["negociacion", "toleranciaRiesgo"],
+  FREE: ["marcaPersonal", "gestionProyectos"],
+  CRE: ["produccionAudiovisual", "marketingDigital"],
+};
+
 export function calcularSalarioProyectado(perfilDominante: PerfilId, skills: Record<string, number>): number {
   const salarioBase = SALARIOS_BASE[perfilDominante];
 
@@ -46,7 +58,12 @@ export function calcularSalarioProyectado(perfilDominante: PerfilId, skills: Rec
   if (nivelIngles >= 4) multiplicadorIngles = 1.6;
   else if (nivelIngles >= 2) multiplicadorIngles = 1.3;
 
-  return Math.round(salarioBase * multiplicadorSkills * multiplicadorIngles);
+  const nivelClave = Math.max(0, ...SKILLS_CLAVE_POR_PERFIL[perfilDominante].map((s) => skills[s] ?? 0));
+  let multiplicadorClave = 1.0;
+  if (nivelClave >= 4) multiplicadorClave = 1.5;
+  else if (nivelClave >= 2) multiplicadorClave = 1.25;
+
+  return Math.round(salarioBase * multiplicadorSkills * multiplicadorIngles * multiplicadorClave);
 }
 
 export type TipoResultado = "goat" | "alto" | "medio" | "bajo" | "troll";
@@ -144,8 +161,12 @@ export function calcularResumenAnio(
   // de específico, no se muestra nada — no se inventa uno genérico.
   const oportunidadPerdida = items.find((i) => i.costoOportunidad)?.costoOportunidad ?? null;
 
-  // Mejor movimiento posible: probar inglés a B2 y cada skill actual llevada
-  // a nivel 5, quedarse con la que más sube el salario proyectado.
+  // Mejor movimiento posible: probar inglés a B2, las skills clave del
+  // perfil (aunque el jugador todavía no las haya tocado) y cada skill que
+  // ya tiene, todas llevadas a su siguiente umbral relevante — quedarse con
+  // la que más sube el salario proyectado. Sin las skills clave del perfil
+  // en la lista de candidatas, esto siempre terminaba recomendando inglés
+  // porque era la única con multiplicador propio en niveles intermedios.
   const actual = calcularSalarioProyectado(perfilDominante, skills);
   let mejorNombre: string | null = null;
   let mejorProyeccion = actual;
@@ -158,8 +179,10 @@ export function calcularResumenAnio(
       mejorNombre = "inglés a B2";
     }
   }
-  for (const [skillId, nivel] of Object.entries(skills)) {
-    if (skillId === "ingles" || nivel >= 5) continue;
+
+  const candidatas = new Set([...Object.keys(skills), ...SKILLS_CLAVE_POR_PERFIL[perfilDominante]]);
+  for (const skillId of candidatas) {
+    if (skillId === "ingles" || (skills[skillId] ?? 0) >= 5) continue;
     const proyeccion = calcularSalarioProyectado(perfilDominante, { ...skills, [skillId]: 5 });
     if (proyeccion > mejorProyeccion) {
       mejorProyeccion = proyeccion;

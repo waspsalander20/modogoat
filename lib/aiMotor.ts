@@ -265,9 +265,30 @@ function validarOpciones(opciones: unknown): asserts opciones is Array<{ letra: 
   }
 }
 
-export async function generarDecisionDeAnio(estado: EstadoIA): Promise<DecisionGenerada> {
-  const esPrimeraDecisionDelJuego = estado.historial_decisiones.length === 0;
-  const instruccion_adicional = esPrimeraDecisionDelJuego
+// La regla 3 del prompt le pide a la IA rotar cuál opción es la "mejor",
+// pero es una instrucción de estilo — en la práctica termina cayendo en
+// patrones (la mejor casi siempre de primera, o siempre en el mismo orden
+// de riesgo). Se reordena acá, con código, para garantizarlo de verdad: las
+// letras A/B/C/D quedan igual, pero el contenido que cae en cada una es
+// aleatorio en cada turno.
+function mezclarOpciones<T extends { letra: string }>(opciones: T[]): T[] {
+  const letras = opciones.map((o) => o.letra);
+  const barajadas = [...opciones];
+  for (let i = barajadas.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [barajadas[i], barajadas[j]] = [barajadas[j], barajadas[i]];
+  }
+  return barajadas.map((o, i) => ({ ...o, letra: letras[i] })) as T[];
+}
+
+export async function generarDecisionDeAnio(
+  estado: EstadoIA,
+  contexto?: { pasoInicialElegido?: string }
+): Promise<DecisionGenerada> {
+  const esPrimeraDecisionDelJuego = estado.historial_decisiones.length === 0 && !contexto?.pasoInicialElegido;
+  const instruccion_adicional = contexto?.pasoInicialElegido
+    ? `El jugador ya eligió su camino general: "${contexto.pasoInicialElegido}", y su área de interés específica ya está en area_libre. tiene_campo_libre debe ser false. Genera una decisión concreta de 4 opciones sobre CÓMO arranca específicamente en esa área este año (ej: autoaprendizaje, buscar una pasantía o aprendiz, tomar un curso corto, empezar ya con un cliente o proyecto pequeño) — opciones realistas y específicas al área que escribió, nunca genéricas.`
+    : esPrimeraDecisionDelJuego
     ? "Esta es la PRIMERA decisión de toda la partida. Tiene que ser sobre qué camino formativo/laboral general va a tomar el jugador al salir del colegio (universidad, técnica, emprender, trabajar). tiene_campo_libre debe ser true, preguntando en qué área quiere formarse o trabajar — este dato se usa para personalizar todo el resto de la partida."
     : "Esta NO es la primera decisión. tiene_campo_libre debe ser false — el área del jugador ya se conoce (está en area_libre) y no se vuelve a preguntar.";
 
@@ -285,7 +306,7 @@ export async function generarDecisionDeAnio(estado: EstadoIA): Promise<DecisionG
     texto: raw.texto,
     tieneCampoLibre: raw.tiene_campo_libre,
     textoCampoLibre: raw.texto_campo_libre ?? null,
-    opciones: raw.opciones,
+    opciones: mezclarOpciones(raw.opciones),
   };
 }
 
@@ -294,7 +315,7 @@ export async function generarEvento(estado: EstadoIA, instruccionAdicional?: str
     instruccion_adicional: instruccionAdicional,
   });
   validarOpciones(evento.opciones);
-  return evento;
+  return { ...evento, opciones: mezclarOpciones(evento.opciones) };
 }
 
 export async function procesarEleccion(

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/lib/generated/prisma/client";
-import { procesarEleccion, generarEvento, type DecisionGenerada } from "@/lib/aiMotor";
+import { procesarEleccion, generarEvento, generarDecisionDeAnio, type DecisionGenerada } from "@/lib/aiMotor";
 import { construirEstadoIA, construirInstruccionMentor, construirInstruccionTipoEvento } from "@/lib/estadoIA";
 import { aplicarSkills, sumarPuntos, calcularPerfil } from "@/lib/motor";
 import type { Puntos } from "@/lib/types";
@@ -43,6 +43,37 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     ...partida.decisiones.map((d) => ({ anio: d.anio, titulo: d.titulo, opcionElegida: d.opcionElegida })),
     ...partida.eventos.map((e) => ({ anio: e.anio, titulo: e.nombre, opcionElegida: e.opcionElegida })),
   ].sort((a, b) => a.anio - b.anio);
+
+  // Esta es la decisión inicial (universidad/técnica/trabajo/emprender +
+  // área libre). En vez de resolverla directo a una consecuencia, generamos
+  // una segunda decisión real sobre CÓMO arranca en esa área — así el
+  // jugador vuelve a elegir en vez de solo leer lo que la IA decidió por él.
+  if (decision.tieneCampoLibre) {
+    const areaLibre = body.campoLibre?.trim() || null;
+    const rutaEntrada = partida.rutaEntrada ?? opcion.titulo;
+    const estadoConArea = construirEstadoIA({ ...partida, areaLibre, rutaEntrada }, historial, null);
+
+    let siguienteDecision: DecisionGenerada;
+    try {
+      siguienteDecision = await generarDecisionDeAnio(estadoConArea, { pasoInicialElegido: opcion.titulo });
+    } catch (error) {
+      console.error("Error generando el segundo paso inicial con IA:", error);
+      return NextResponse.json({ error: "No pudimos continuar tu historia. Intenta de nuevo." }, { status: 502 });
+    }
+
+    const nuevoTurnoInicial = { tipo: "decision" as const, decision: siguienteDecision };
+    await prisma.partida.update({
+      where: { id },
+      data: {
+        rutaEntrada,
+        areaLibre,
+        turnoActual: nuevoTurnoInicial as unknown as Prisma.InputJsonValue,
+      },
+    });
+
+    return NextResponse.json({ ok: true, turno: nuevoTurnoInicial });
+  }
+
   const estadoIA = construirEstadoIA(partida, historial, null);
 
   const totalTurnosPrevios = partida.decisiones.length + partida.eventos.length;
@@ -56,7 +87,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         titulo: decision.titulo,
         opcion_elegida: opcion.letra,
         opcion_texto: opcion.titulo,
-        campo_libre: body.campoLibre,
         tiempo_respuesta: body.tiempoRespuesta ?? 0,
       },
       instruccionMentor
@@ -108,7 +138,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         titulo: decision.titulo,
         opcionElegida: opcion.letra,
         opcionTexto: opcion.titulo,
-        campoLibre: body.campoLibre?.trim() || null,
         tiempoRespuesta: body.tiempoRespuesta ?? 0,
         narrativa: consecuencia.narrativa,
         ingresoAntes,
@@ -131,8 +160,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         medallasGanadas,
         alertas,
         mentorActivo,
-        rutaEntrada: partida.rutaEntrada ?? opcion.titulo,
-        areaLibre: body.campoLibre?.trim() || partida.areaLibre,
         turnoActual: nuevoTurno ? (nuevoTurno as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
       },
     }),
