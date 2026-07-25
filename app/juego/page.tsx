@@ -9,8 +9,6 @@ export default function SplashPage() {
       <div className="relative flex flex-1 flex-col items-center px-6 pt-8 pb-8 max-w-md mx-auto w-full text-center">
         <Image src="/logo-mark.png" alt="Modo GOAT" width={947} height={451} priority className="w-52 h-auto" />
 
-        <div className="flex-1" />
-
         <h1 className="text-3xl font-extrabold text-white leading-tight" style={{ textShadow: "0 2px 8px rgba(0,0,0,0.35)" }}>
           Descubre quién <span className="text-[#ffd23f]">podrías llegar a ser</span>
         </h1>
@@ -21,7 +19,21 @@ export default function SplashPage() {
           Vive una nueva vida. Toma decisiones, desarrolla habilidades y descubre tu verdadero potencial.
         </p>
 
-        <Link href="/juego/onboarding" className="btn-onboarding w-full mt-6 text-center text-lg block">
+        <div className="flex-1" />
+
+        <Image
+          src="/goat-mascot.png"
+          alt="Mascota de Modo GOAT"
+          width={856}
+          height={1298}
+          className="w-52 h-auto -mb-2"
+          style={{
+            maskImage: "radial-gradient(ellipse 62% 62% at 50% 45%, black 60%, transparent 100%)",
+            WebkitMaskImage: "radial-gradient(ellipse 62% 62% at 50% 45%, black 60%, transparent 100%)",
+          }}
+        />
+
+        <Link href="/juego/onboarding" className="btn-onboarding w-full mt-4 text-center text-lg block">
           Comenzar aventura ›
         </Link>
 
