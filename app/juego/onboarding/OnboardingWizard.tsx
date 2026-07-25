@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { PREGUNTAS_ONBOARDING } from "@/lib/data/onboarding";
 
@@ -99,8 +100,8 @@ export default function OnboardingWizard() {
   return (
     <main className="onboarding-bg flex flex-1 flex-col">
       <div className="flex flex-1 flex-col px-6 py-8 max-w-md mx-auto w-full">
-        <div className="text-center text-white font-extrabold tracking-wide text-sm mb-6 opacity-90">
-          MODO GOAT
+        <div className="flex justify-center mb-6">
+          <Image src="/logo-mark.png" alt="Modo GOAT" width={947} height={451} priority className="w-40 h-auto" />
         </div>
 
         {error && (
