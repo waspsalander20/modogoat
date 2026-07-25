@@ -97,180 +97,174 @@ export default function OnboardingWizard() {
   }
 
   return (
-    <main className="flex flex-1 flex-col px-6 py-10 max-w-md mx-auto w-full">
-      {error && (
-        <div className="mb-4 rounded-xl bg-goat-bad/15 border border-goat-bad text-goat-bad px-4 py-3 text-sm">
-          {error}
+    <main className="onboarding-bg flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col px-6 py-8 max-w-md mx-auto w-full">
+        <div className="text-center text-white font-extrabold tracking-wide text-sm mb-6 opacity-90">
+          MODO GOAT
         </div>
-      )}
 
-      {paso.tipo === "nombre" && (
-        <div className="flex flex-col gap-6 flex-1 justify-center">
-          <div>
-            <h1 className="text-2xl font-extrabold mb-2">¿Cómo te llamas?</h1>
-            <p className="text-goat-ink-muted text-sm">Este va a ser tu personaje en Modo GOAT.</p>
+        {error && (
+          <div className="mb-4 rounded-xl bg-white/95 border border-red-300 text-red-600 px-4 py-3 text-sm font-semibold">
+            {error}
           </div>
-          <input
-            autoFocus
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-            placeholder="Tu nombre"
-            className="bg-goat-surface-2 border border-goat-border rounded-xl px-4 py-3 text-lg outline-none focus:border-goat-accent-solid"
-          />
-          <button
-            className="btn-primary self-start"
-            disabled={!nombre.trim()}
-            onClick={() => setPaso({ tipo: "datos" })}
-          >
-            Continuar
-          </button>
-        </div>
-      )}
+        )}
 
-      {paso.tipo === "datos" && (
-        <div className="flex flex-col gap-6 flex-1 justify-center">
-          <h1 className="text-2xl font-extrabold">Un par de datos, {nombre}</h1>
-          <div>
-            <label className="text-sm text-goat-ink-muted block mb-1">Edad actual (14–28)</label>
+        {paso.tipo === "nombre" && (
+          <div className="flex flex-col gap-6 flex-1 justify-center">
+            <div>
+              <h1 className="text-3xl font-extrabold text-white mb-2">¿Cómo te llamas?</h1>
+              <p className="onboarding-label text-sm">Este va ser tu personaje en <strong>MODO GOAT</strong>.</p>
+            </div>
             <input
-              type="number"
-              min={14}
-              max={28}
-              value={edad}
-              onChange={(e) => setEdad(e.target.value)}
-              className="bg-goat-surface-2 border border-goat-border rounded-xl px-4 py-3 text-lg w-full outline-none focus:border-goat-accent-solid"
+              autoFocus
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder="Tu nombre..."
+              className="onboarding-input"
             />
+            <button
+              className="btn-onboarding self-start"
+              disabled={!nombre.trim()}
+              onClick={() => setPaso({ tipo: "datos" })}
+            >
+              Continuar ›
+            </button>
           </div>
-          <div>
-            <label className="text-sm text-goat-ink-muted block mb-2">Género</label>
-            <div className="flex gap-2">
-              {["masculino", "femenino", "otro"].map((g) => (
+        )}
+
+        {paso.tipo === "datos" && (
+          <div className="flex flex-col gap-6 flex-1 justify-center">
+            <h1 className="text-2xl font-extrabold text-white">Un par de datos, {nombre}</h1>
+            <div>
+              <label className="onboarding-label text-sm block mb-2">Edad actual (14–28)</label>
+              <input
+                type="number"
+                min={14}
+                max={28}
+                value={edad}
+                onChange={(e) => setEdad(e.target.value)}
+                className="onboarding-input w-full"
+              />
+            </div>
+            <div>
+              <label className="onboarding-label text-sm block mb-2">Género</label>
+              <div className="flex gap-2">
+                {["masculino", "femenino", "otro"].map((g) => (
+                  <button
+                    key={g}
+                    onClick={() => setGenero(g)}
+                    className={`onboarding-option flex-1 py-3 capitalize ${genero === g ? "seleccionada" : ""}`}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button
+              className="btn-onboarding self-start"
+              disabled={!edad || Number(edad) < 14 || Number(edad) > 28 || !genero}
+              onClick={() => setPaso({ tipo: "contexto" })}
+            >
+              Continuar ›
+            </button>
+          </div>
+        )}
+
+        {paso.tipo === "contexto" && (
+          <div className="flex flex-col gap-6 flex-1 justify-center">
+            <h1 className="text-2xl font-extrabold text-white">Tu contexto</h1>
+            <div>
+              <label className="onboarding-label text-sm block mb-2">Ciudad</label>
+              <input
+                value={ciudad}
+                onChange={(e) => setCiudad(e.target.value)}
+                className="onboarding-input w-full"
+              />
+            </div>
+            <div>
+              <label className="onboarding-label text-sm block mb-2">¿Con quién vives?</label>
+              <div className="flex flex-col gap-2">
+                {[
+                  { v: "familia_completa", t: "Familia completa" },
+                  { v: "solo_mama", t: "Solo con mamá" },
+                  { v: "solo_papa", t: "Solo con papá" },
+                  { v: "otros_familiares", t: "Otros familiares" },
+                  { v: "solo", t: "Solo/a" },
+                ].map((o) => (
+                  <button
+                    key={o.v}
+                    onClick={() => setContexto(o.v)}
+                    className={`onboarding-option px-4 py-3 text-left ${contexto === o.v ? "seleccionada" : ""}`}
+                  >
+                    {o.t}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="onboarding-label text-sm block mb-2">¿Trabajas actualmente?</label>
+              <div className="flex gap-2">
+                {[
+                  { v: "si", t: "Sí" },
+                  { v: "a_veces", t: "A veces" },
+                  { v: "no", t: "No" },
+                ].map((o) => (
+                  <button
+                    key={o.v}
+                    onClick={() => setTrabaja(o.v)}
+                    className={`onboarding-option flex-1 py-3 ${trabaja === o.v ? "seleccionada" : ""}`}
+                  >
+                    {o.t}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button
+              className="btn-onboarding self-start"
+              disabled={!contexto || !trabaja}
+              onClick={() => irAPregunta(0)}
+            >
+              Empezar mi historia ›
+            </button>
+          </div>
+        )}
+
+        {paso.tipo === "pregunta" && (
+          <div className="flex flex-col gap-6 flex-1 justify-center">
+            <div className="onboarding-label text-xs font-extrabold uppercase tracking-wide">
+              {paso.index + 1} / {PREGUNTAS_ONBOARDING.length}
+            </div>
+            <h1 className="text-xl font-extrabold leading-snug text-white">
+              {PREGUNTAS_ONBOARDING[paso.index].texto(nombre)}
+            </h1>
+            <div className="flex flex-col gap-3">
+              {ordenOpciones[paso.index].map((o) => (
                 <button
-                  key={g}
-                  onClick={() => setGenero(g)}
-                  className={`flex-1 rounded-xl py-3 border capitalize ${
-                    genero === g ? "bg-goat-accent-solid text-white border-goat-accent-solid font-bold" : "border-goat-border"
-                  }`}
+                  key={o.letra}
+                  onClick={() => setOpcionSeleccionada(o.letra)}
+                  className={`onboarding-option px-4 py-4 text-left ${opcionSeleccionada === o.letra ? "seleccionada" : ""}`}
                 >
-                  {g}
+                  {o.texto}
                 </button>
               ))}
             </div>
+            <button
+              className="btn-onboarding self-start"
+              disabled={!opcionSeleccionada}
+              onClick={() => responder(opcionSeleccionada!)}
+            >
+              Siguiente ›
+            </button>
           </div>
-          <button
-            className="btn-primary self-start"
-            disabled={!edad || Number(edad) < 14 || Number(edad) > 28 || !genero}
-            onClick={() => setPaso({ tipo: "contexto" })}
-          >
-            Continuar
-          </button>
-        </div>
-      )}
+        )}
 
-      {paso.tipo === "contexto" && (
-        <div className="flex flex-col gap-6 flex-1 justify-center">
-          <h1 className="text-2xl font-extrabold">Tu contexto</h1>
-          <div>
-            <label className="text-sm text-goat-ink-muted block mb-1">Ciudad</label>
-            <input
-              value={ciudad}
-              onChange={(e) => setCiudad(e.target.value)}
-              className="bg-goat-surface-2 border border-goat-border rounded-xl px-4 py-3 text-lg w-full outline-none focus:border-goat-accent-solid"
-            />
+        {paso.tipo === "enviando" && (
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center">
+            <div className="text-5xl animate-bounce">🐐</div>
+            <p className="text-white font-semibold">Armando tu historia...</p>
           </div>
-          <div>
-            <label className="text-sm text-goat-ink-muted block mb-2">¿Con quién vives?</label>
-            <div className="flex flex-col gap-2">
-              {[
-                { v: "familia_completa", t: "Familia completa" },
-                { v: "solo_mama", t: "Solo con mamá" },
-                { v: "solo_papa", t: "Solo con papá" },
-                { v: "otros_familiares", t: "Otros familiares" },
-                { v: "solo", t: "Solo/a" },
-              ].map((o) => (
-                <button
-                  key={o.v}
-                  onClick={() => setContexto(o.v)}
-                  className={`rounded-xl px-4 py-3 text-left border font-bold ${
-                    contexto === o.v
-                      ? "bg-goat-accent-solid text-white border-goat-accent-solid"
-                      : "bg-goat-surface-2 border-goat-border font-normal"
-                  }`}
-                >
-                  {o.t}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="text-sm text-goat-ink-muted block mb-2">¿Trabajas actualmente?</label>
-            <div className="flex gap-2">
-              {[
-                { v: "si", t: "Sí" },
-                { v: "a_veces", t: "A veces" },
-                { v: "no", t: "No" },
-              ].map((o) => (
-                <button
-                  key={o.v}
-                  onClick={() => setTrabaja(o.v)}
-                  className={`flex-1 rounded-xl py-3 border ${
-                    trabaja === o.v ? "bg-goat-accent-solid text-white border-goat-accent-solid font-bold" : "border-goat-border"
-                  }`}
-                >
-                  {o.t}
-                </button>
-              ))}
-            </div>
-          </div>
-          <button
-            className="btn-primary self-start"
-            disabled={!contexto || !trabaja}
-            onClick={() => irAPregunta(0)}
-          >
-            Empezar mi historia
-          </button>
-        </div>
-      )}
-
-      {paso.tipo === "pregunta" && (
-        <div className="flex flex-col gap-6 flex-1 justify-center">
-          <div className="text-xs text-goat-ink-muted font-bold uppercase tracking-wide">
-            {paso.index + 1} / {PREGUNTAS_ONBOARDING.length}
-          </div>
-          <h1 className="text-xl font-extrabold leading-snug">
-            {PREGUNTAS_ONBOARDING[paso.index].texto(nombre)}
-          </h1>
-          <div className="flex flex-col gap-3">
-            {ordenOpciones[paso.index].map((o) => (
-              <button
-                key={o.letra}
-                onClick={() => setOpcionSeleccionada(o.letra)}
-                className={`rounded-xl px-4 py-4 text-left border ${
-                  opcionSeleccionada === o.letra
-                    ? "bg-goat-accent-solid text-white border-goat-accent-solid font-bold"
-                    : "bg-goat-surface-2 border-goat-border"
-                }`}
-              >
-                {o.texto}
-              </button>
-            ))}
-          </div>
-          <button
-            className="btn-primary self-start"
-            disabled={!opcionSeleccionada}
-            onClick={() => responder(opcionSeleccionada!)}
-          >
-            Siguiente
-          </button>
-        </div>
-      )}
-
-      {paso.tipo === "enviando" && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center">
-          <div className="text-5xl animate-bounce">🐐</div>
-          <p className="text-goat-ink-muted">Armando tu historia...</p>
-        </div>
-      )}
+        )}
+      </div>
     </main>
   );
 }

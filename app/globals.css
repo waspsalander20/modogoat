@@ -24,6 +24,14 @@
   --goat-bad: #ef4444;
   --goat-bad-bg: #fee2e2;
   --goat-warn: #f59e0b;
+
+  /* Onboarding — gradiente cálido tomado del diseño de Figma "Creación de personaje" */
+  --onboarding-grad-top: #fecb44;
+  --onboarding-grad-bottom: #e45603;
+  --onboarding-button-from: #ffc233;
+  --onboarding-button-mid: #f18704;
+  --onboarding-button-to: #e35d02;
+  --onboarding-button-border: #c94a02;
 }
 
 @theme inline {
@@ -153,4 +161,64 @@ body {
 }
 .prose-narrativa strong {
   color: var(--goat-ink);
+}
+
+.onboarding-bg {
+  background: linear-gradient(180deg, var(--onboarding-grad-top) 0%, var(--onboarding-grad-bottom) 100%);
+  min-height: 100%;
+}
+
+.onboarding-input {
+  background: #ffffff;
+  border: none;
+  border-radius: 999px;
+  padding: 1rem 1.5rem;
+  font-size: 1.05rem;
+  color: var(--goat-ink);
+  box-shadow: 0 4px 14px -6px rgba(0, 0, 0, 0.35);
+}
+.onboarding-input::placeholder {
+  color: #b0b0b0;
+}
+.onboarding-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.6), 0 4px 14px -6px rgba(0, 0, 0, 0.35);
+}
+
+.btn-onboarding {
+  background: linear-gradient(180deg, var(--onboarding-button-from) 0%, var(--onboarding-button-mid) 55%, var(--onboarding-button-to) 100%);
+  border: 1.5px solid var(--onboarding-button-border);
+  color: #ffffff;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 1rem 1.75rem;
+  box-shadow: 0 6px 16px -6px rgba(180, 60, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-onboarding:active {
+  transform: scale(0.97);
+}
+.btn-onboarding:disabled {
+  opacity: 0.5;
+  box-shadow: none;
+}
+
+.onboarding-option {
+  background: rgba(255, 255, 255, 0.92);
+  border: none;
+  border-radius: 999px;
+  color: var(--goat-ink);
+  font-weight: 700;
+  box-shadow: 0 2px 8px -4px rgba(0, 0, 0, 0.25);
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+.onboarding-option.seleccionada {
+  background: linear-gradient(180deg, var(--onboarding-button-from) 0%, var(--onboarding-button-mid) 55%, var(--onboarding-button-to) 100%);
+  border: 1.5px solid var(--onboarding-button-border);
+  color: #ffffff;
+}
+
+.onboarding-label {
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 700;
 }
