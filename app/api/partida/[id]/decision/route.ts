@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/lib/generated/prisma/client";
 import { procesarEleccion, generarEvento, generarDecisionDeAnio, type DecisionGenerada } from "@/lib/aiMotor";
 import { construirEstadoIA, construirInstruccionMentor, construirInstruccionTipoEvento } from "@/lib/estadoIA";
+import { sanitizarTextoLibre } from "@/lib/sanitizarTexto";
 import { aplicarSkills, sumarPuntos, calcularPerfil } from "@/lib/motor";
 import type { Puntos } from "@/lib/types";
 
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   // una segunda decisión real sobre CÓMO arranca en esa área — así el
   // jugador vuelve a elegir en vez de solo leer lo que la IA decidió por él.
   if (decision.tieneCampoLibre) {
-    const areaLibre = body.campoLibre?.trim() || null;
+    const areaLibre = sanitizarTextoLibre(body.campoLibre);
     const rutaEntrada = partida.rutaEntrada ?? opcion.titulo;
     const estadoConArea = construirEstadoIA({ ...partida, areaLibre, rutaEntrada }, historial, null);
 

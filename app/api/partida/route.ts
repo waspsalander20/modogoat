@@ -4,6 +4,7 @@ import { PREGUNTAS_ONBOARDING } from "@/lib/data/onboarding";
 import { detectarTroll } from "@/lib/deteccionTroll";
 import { calcularPerfil } from "@/lib/perfilamiento";
 import { PUNTOS_VACIOS, type Puntos } from "@/lib/types";
+import { sanitizarTextoLibre } from "@/lib/sanitizarTexto";
 
 interface CrearPartidaBody {
   nombre: string;
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
       jugadorId: jugador.id,
       respuestasOnboarding: body.respuestas,
       tiemposOnboarding: body.tiempos ?? {},
-      areaLibre: body.areaLibre?.trim() || null,
+      areaLibre: sanitizarTextoLibre(body.areaLibre),
       puntosPerfil,
       perfilDominante: perfil.dominante,
       perfilSecundario: perfil.secundario,
