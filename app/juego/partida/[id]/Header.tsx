@@ -5,7 +5,9 @@ import { formatoPesos } from "@/lib/format";
 import { NOMBRES_PERFIL } from "@/lib/data/perfiles";
 import type { PerfilId } from "@/lib/types";
 
-const EDAD_FIN = 30;
+// La partida dura 10 años desde la edad de inicio, no siempre hasta los 30
+// (ver también app/api/partida/[id]/fin-anio/route.ts).
+const DURACION_ANIOS = 10;
 
 export default function Header() {
   const { datos } = usePartidaHeader();
@@ -14,8 +16,9 @@ export default function Header() {
     return <div className="bg-goat-header-bg h-40 animate-pulse" />;
   }
 
-  const restantes = Math.max(0, EDAD_FIN - datos.edadActual);
-  const totalAnios = Math.max(1, EDAD_FIN - datos.edadInicio);
+  const edadFin = datos.edadInicio + DURACION_ANIOS;
+  const restantes = Math.max(0, edadFin - datos.edadActual);
+  const totalAnios = Math.max(1, edadFin - datos.edadInicio);
   const progreso = Math.min(
     100,
     Math.max(0, ((datos.edadActual - datos.edadInicio) / totalAnios) * 100)
@@ -42,7 +45,7 @@ export default function Header() {
           <div>
             <div className="text-white font-extrabold leading-tight">{datos.nombre}</div>
             <div className="text-goat-header-ink-muted text-xs">
-              {perfilNombre} · Año {datos.edadActual} de {EDAD_FIN}
+              {perfilNombre} · Año {datos.edadActual} de {edadFin}
             </div>
           </div>
         </div>

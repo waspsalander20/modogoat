@@ -8,7 +8,10 @@ import { construirEstadoIA } from "@/lib/estadoIA";
 import type { EstadoPartida, PerfilId, Puntos } from "@/lib/types";
 import { usoVacio, sumarUso, type UsoIA } from "@/lib/aiCost";
 
-const EDAD_FIN = 30;
+// La partida dura 10 años desde la edad de inicio del jugador, no siempre
+// "hasta los 30" — alguien que empieza a los 16 termina a los 26, alguien
+// que empieza a los 17 termina a los 27.
+const DURACION_ANIOS = 10;
 
 export async function POST(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -33,8 +36,9 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   const porcentajeGastos = calcularGastos(partida.edadActual);
   const ahorros = partida.ahorros + Math.round(partida.ingresoActual * (1 - porcentajeGastos));
   const nuevaEdad = partida.edadActual + 1;
+  const edadFin = partida.edadInicio + DURACION_ANIOS;
 
-  if (nuevaEdad < EDAD_FIN) {
+  if (nuevaEdad < edadFin) {
     await prisma.partida.update({
       where: { id },
       data: {

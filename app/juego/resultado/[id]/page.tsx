@@ -12,9 +12,9 @@ import type { PerfilId } from "@/lib/types";
 const TITULOS_RESULTADO: Record<string, string> = {
   goat: "🐐 GOAT MODE",
   alto: "🌟 Resultado alto",
-  medio: "📊 Llegaste a los 30",
-  bajo: "🌱 Llegaste a los 30",
-  troll: "🪞 Llegaste a los 30",
+  medio: "📊 Diez años después",
+  bajo: "🌱 Diez años después",
+  troll: "🪞 Diez años después",
 };
 
 export default async function ResultadoPage({ params }: { params: Promise<{ id: string }> }) {
@@ -49,7 +49,7 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
         <div className="text-6xl mb-3">{resultado === "goat" ? "🐐" : "🎬"}</div>
         <h1 className="text-2xl font-extrabold mb-1">{TITULOS_RESULTADO[resultado]}</h1>
         <p className="text-goat-ink-muted text-sm">
-          {partida.jugador.nombre} · {partida.edadInicio} → 30 años
+          {partida.jugador.nombre} · {partida.edadInicio} → {partida.edadInicio + 10} años
         </p>
       </div>
 

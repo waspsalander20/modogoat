@@ -22,7 +22,9 @@ interface DecisionOEventoReciente {
   opcionTexto: string;
 }
 
-const EDAD_FIN = 30;
+// La partida dura 10 años desde la edad de inicio del jugador, no siempre
+// "hasta los 30" (ver también fin-anio/route.ts y Header.tsx).
+const DURACION_ANIOS = 10;
 
 export function construirEstadoIA(
   partida: PartidaConDatos,
@@ -42,7 +44,7 @@ export function construirEstadoIA(
     ingreso_actual: partida.ingresoActual,
     skills: (partida.skills as Record<string, number>) ?? {},
     anio_actual: partida.edadActual,
-    edad_fin: EDAD_FIN,
+    edad_fin: partida.edadInicio + DURACION_ANIOS,
     ultimo_evento: ultimoEvento,
     medallas: partida.medallasGanadas,
     mentor_activo: partida.mentorActivo,
