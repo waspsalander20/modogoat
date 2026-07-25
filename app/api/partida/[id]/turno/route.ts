@@ -72,8 +72,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
   // No hay turno pendiente: generamos la decisión principal del año.
   const historial = [
-    ...partida.decisiones.map((d) => ({ anio: d.anio, titulo: d.titulo, opcionElegida: d.opcionElegida })),
-    ...partida.eventos.map((e) => ({ anio: e.anio, titulo: e.nombre, opcionElegida: e.opcionElegida })),
+    ...partida.decisiones.map((d) => ({ anio: d.anio, titulo: d.titulo, opcionElegida: d.opcionElegida, opcionTexto: d.opcionTexto })),
+    ...partida.eventos.map((e) => ({ anio: e.anio, titulo: e.nombre, opcionElegida: e.opcionElegida, opcionTexto: e.opcionTexto })),
   ].sort((a, b) => a.anio - b.anio);
 
   const ultimoEvento = partida.eventos.length > 0 ? partida.eventos[partida.eventos.length - 1].nombre : null;

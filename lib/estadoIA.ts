@@ -19,6 +19,7 @@ interface DecisionOEventoReciente {
   anio: number;
   titulo: string;
   opcionElegida: string;
+  opcionTexto: string;
 }
 
 const EDAD_FIN = 30;
@@ -45,10 +46,15 @@ export function construirEstadoIA(
     ultimo_evento: ultimoEvento,
     medallas: partida.medallasGanadas,
     mentor_activo: partida.mentorActivo,
-    historial_decisiones: historial.slice(-3).map((d) => ({
+    // Últimas 6 (no 3) para que hechos establecidos hace 2 años no se
+    // pierdan de vista, y con el texto real de lo elegido — antes solo
+    // mandaba la letra (A/B/C/D), que sin el texto no dice nada; la IA no
+    // podía recordar qué había pasado, solo que el jugador "eligió C".
+    historial_decisiones: historial.slice(-6).map((d) => ({
       anio: d.anio,
       titulo: d.titulo,
       opcion_elegida: d.opcionElegida,
+      opcion_texto: d.opcionTexto,
     })),
   };
 }

@@ -39,8 +39,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   const historial = [
-    ...partida.decisiones.map((d) => ({ anio: d.anio, titulo: d.titulo, opcionElegida: d.opcionElegida })),
-    ...partida.eventos.map((e) => ({ anio: e.anio, titulo: e.nombre, opcionElegida: e.opcionElegida })),
+    ...partida.decisiones.map((d) => ({ anio: d.anio, titulo: d.titulo, opcionElegida: d.opcionElegida, opcionTexto: d.opcionTexto })),
+    ...partida.eventos.map((e) => ({ anio: e.anio, titulo: e.nombre, opcionElegida: e.opcionElegida, opcionTexto: e.opcionTexto })),
   ].sort((a, b) => a.anio - b.anio);
   const estadoIA = construirEstadoIA(partida, historial, evento.nombre);
 

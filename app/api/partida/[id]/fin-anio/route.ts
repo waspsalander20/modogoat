@@ -91,8 +91,8 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   const medallas = elegirMedallasGanadas(estado, resultadoTipo);
 
   const historial = [
-    ...partida.decisiones.map((d) => ({ anio: d.anio, titulo: d.titulo, opcionElegida: d.opcionElegida })),
-    ...partida.eventos.map((e) => ({ anio: e.anio, titulo: e.nombre, opcionElegida: e.opcionElegida })),
+    ...partida.decisiones.map((d) => ({ anio: d.anio, titulo: d.titulo, opcionElegida: d.opcionElegida, opcionTexto: d.opcionTexto })),
+    ...partida.eventos.map((e) => ({ anio: e.anio, titulo: e.nombre, opcionElegida: e.opcionElegida, opcionTexto: e.opcionTexto })),
   ].sort((a, b) => a.anio - b.anio);
   const estadoIA = construirEstadoIA(
     { ...partida, edadActual: nuevaEdad, mentorActivo: partida.mentorActivo },
