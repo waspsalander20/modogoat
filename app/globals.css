@@ -25,6 +25,20 @@
   --goat-bad-bg: #fee2e2;
   --goat-warn: #f59e0b;
 
+  /* Header/nav del juego — tomado del diseño de Figma "Dashboard" */
+  --game-header-from: #fdbd12;
+  --game-header-mid: #f69c04;
+  --game-header-to: #c76004;
+  --game-income-pill: #15b515;
+  --game-progress-fill: #15b515;
+  --game-nav-bg: #ddeeff;
+  --game-tab-jugar-from: #2bc247;
+  --game-tab-jugar-to: #1f8a45;
+  --game-tab-skills-from: #e8ab11;
+  --game-tab-skills-to: #d67205;
+  --game-tab-futuro-from: #592cc1;
+  --game-tab-futuro-to: #3b1c81;
+
   /* Onboarding — gradiente cálido tomado del diseño de Figma "Creación de personaje" */
   --onboarding-grad-top: #fecb44;
   --onboarding-grad-bottom: #e45603;
