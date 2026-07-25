@@ -12,23 +12,31 @@ export function calcularGastos(edad: number): number {
 
 export function aplicarSkills(
   skillsActuales: Record<string, number>,
-  cambios: Record<string, number>
+  cambios: Record<string, number> | null | undefined
 ): Record<string, number> {
   const resultado = { ...skillsActuales };
-  for (const [skill, delta] of Object.entries(cambios)) {
+  for (const [skill, delta] of Object.entries(cambios ?? {})) {
     const actual = resultado[skill] ?? 0;
     resultado[skill] = Math.max(0, Math.min(5, actual + delta));
   }
   return resultado;
 }
 
-export function sumarPuntos(actuales: Puntos, nuevos: Puntos): Puntos {
+// Defensivo en ambos lados: `nuevos` viene de la IA y, pese a strict:true en
+// el schema, ocasionalmente llega incompleto o el objeto entero viene
+// undefined — sin esto, sumarPuntos revienta con un 500 sin manejar, el
+// turno nunca se guarda, y el jugador queda repitiendo la misma decisión
+// para siempre hasta que la IA por fin devuelva algo bien formado (visto en
+// vivo durante testing).
+export function sumarPuntos(actuales: Puntos | null | undefined, nuevos: Puntos | null | undefined): Puntos {
+  const a = actuales ?? ({} as Partial<Puntos>);
+  const n = nuevos ?? ({} as Partial<Puntos>);
   return {
-    EMP: actuales.EMP + (nuevos.EMP ?? 0),
-    INV: actuales.INV + (nuevos.INV ?? 0),
-    EMP2: actuales.EMP2 + (nuevos.EMP2 ?? 0),
-    FREE: actuales.FREE + (nuevos.FREE ?? 0),
-    CRE: actuales.CRE + (nuevos.CRE ?? 0),
+    EMP: (a.EMP ?? 0) + (n.EMP ?? 0),
+    INV: (a.INV ?? 0) + (n.INV ?? 0),
+    EMP2: (a.EMP2 ?? 0) + (n.EMP2 ?? 0),
+    FREE: (a.FREE ?? 0) + (n.FREE ?? 0),
+    CRE: (a.CRE ?? 0) + (n.CRE ?? 0),
   };
 }
 

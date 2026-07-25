@@ -1,9 +1,12 @@
 # Modo GOAT
 
-Simulador de vida para orientación vocacional (14–30 años). Ver
-`ModoGOAT_GDD.md` para el diseño completo y `ModoGOAT_Prompt_Motor.md` para
-el diseño del motor narrativo con IA. Esta implementación cubre el alcance
-de demo descrito en el GDD § "Prioridades para el demo":
+Simulador de vida para orientación vocacional. El jugador entra entre los 14
+y los 28 años y vive los siguientes **10 años** de su vida (empezar a los 16
+termina a los 26, empezar a los 20 termina a los 30, etc. — no siempre
+termina "a los 30"). Ver `ModoGOAT_GDD.md` para el diseño completo y
+`ModoGOAT_Prompt_Motor.md` para el diseño del motor narrativo con IA. Esta
+implementación cubre el alcance de demo descrito en el GDD § "Prioridades
+para el demo":
 
 - Flujo completo del juego: onboarding (8 preguntas disfrazadas) → decisión
   principal + eventos por año, generados en vivo por IA → resultado final
@@ -22,13 +25,26 @@ nombre, sin cuentas), apps nativas, Modo Parceros, API de datos externa.
 
 Todo el contenido de la partida (decisión principal de cada año, eventos,
 consecuencias de cada elección, y el análisis final) se genera en vivo
-llamando a la API de Claude (`lib/aiMotor.ts`, modelo `claude-opus-4-8`,
-forced tool-use para JSON estructurado) — no hay bancos de contenido
-estáticos. `lib/estadoIA.ts` arma el estado de la partida que se le manda al
-modelo en cada llamada. La cantidad de eventos por año (0–2) y el avance de
-año a año son lógica local determinística (`app/api/partida/[id]/decision`,
-`/evento`, `/fin-anio`) — la IA nunca decide el ritmo del juego, solo
-redacta el contenido. Requiere `ANTHROPIC_API_KEY` en `.env`.
+llamando a la API de Claude (`lib/aiMotor.ts`, modelo `claude-sonnet-5`,
+forced tool-use con schema estricto para JSON estructurado) — no hay bancos
+de contenido estáticos. `lib/estadoIA.ts` arma el estado de la partida que
+se le manda al modelo en cada llamada, incluye el historial reciente
+(hechos canónicos que la IA no puede contradecir) y fuerza determinísticamente
+cosas que la IA por sí sola no garantiza de forma confiable: que aparezca un
+mentor antes de cierto punto, y que los tipos de evento (imprevisto/
+oportunidad) se balanceen. El texto libre que escribe el jugador (área de
+interés) se trata siempre como dato, nunca como instrucción — ver
+`lib/sanitizarTexto.ts` y la sección "SEGURIDAD" del prompt del sistema.
+
+La cantidad de eventos por año (siempre se intenta 1, tope de 2) y el
+avance de año a año son lógica local determinística
+(`app/api/partida/[id]/decision`, `/evento`, `/fin-anio`) — la IA nunca
+decide el ritmo del juego, solo redacta el contenido. Requiere
+`ANTHROPIC_API_KEY` en `.env`.
+
+Cada llamada a la IA reporta su uso real de tokens (`lib/aiCost.ts`), que se
+acumula por partida y se muestra en el dashboard de Sapiencia — costo real
+en USD/COP, para calcular precio cuando se cierre un contrato.
 
 ## Stack
 
@@ -61,8 +77,14 @@ npm run dev      # servidor de desarrollo
 npm run build    # build de producción (type-checks incluido)
 npm run start    # sirve el build de producción
 npm run lint      # eslint
+npm run test      # smoke-test.ts — lógica pura del juego (sin IA, sin framework)
 npx prisma studio # explorar la base de datos
 ```
+
+`npm run test` corre `smoke-test.ts` (raíz del repo): asserts sobre ingreso
+proyectado, resultado final, medallas, resumen de año, perfil vocacional y
+detección de troll. No cubre las llamadas a la IA (no determinísticas) — para
+eso, jugar una partida completa a mano es la única forma real de probar.
 
 ## Despliegue en Railway
 

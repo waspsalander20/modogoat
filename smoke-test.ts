@@ -92,6 +92,17 @@ caso("sumarPuntos: suma por perfil, ignora perfiles ausentes en el delta", () =>
   assert.equal(resultado.EMP, 15);
   assert.equal(resultado.INV, 5);
 });
+caso("sumarPuntos: no revienta si la IA devuelve puntos incompletos o undefined", () => {
+  // Visto en vivo: la IA a veces devuelve puntos_perfil incompleto pese a
+  // strict:true en el schema — esto no puede tumbar la partida.
+  const actuales = { EMP: 10, INV: 5, EMP2: 0, FREE: 0, CRE: 0 };
+  const incompleto = sumarPuntos(actuales, { EMP: 3 } as Puntos);
+  assert.equal(incompleto.EMP, 13);
+  assert.equal(incompleto.INV, 5, "los perfiles ausentes en nuevos no deben tocar los actuales");
+
+  const undefinedTotal = sumarPuntos(actuales, undefined);
+  assert.equal(undefinedTotal.EMP, 10, "undefined completo en nuevos no debe romper ni sumar nada");
+});
 
 // --- calcularSalarioProyectado ---
 caso("calcularSalarioProyectado: sin skills devuelve el salario base del perfil", () => {
