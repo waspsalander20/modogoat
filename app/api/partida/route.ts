@@ -81,7 +81,11 @@ export async function POST(request: NextRequest) {
       skills: {},
       estado: "jugando",
       tiempoPromedio: deteccion.tiempoPromedio,
-      patronTroll: deteccion.patronRepetido,
+      // patronTroll es el único campo persistido que fin-anio y generarAlertas
+      // leen como "es troll" — tiene que guardar la señal completa (esTroll),
+      // no solo el patrón repetido. Antes guardaba deteccion.patronRepetido y
+      // perdía silenciosamente la señal de "respondió demasiado rápido".
+      patronTroll: deteccion.esTroll,
     },
   });
 
