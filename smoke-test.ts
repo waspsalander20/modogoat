@@ -156,6 +156,14 @@ caso("elegirMedallasGanadas: preserva medallas ya ganadas antes", () => {
   const medallas = elegirMedallasGanadas(estado, "bajo");
   assert.ok(medallas.includes("el_estratega"));
 });
+caso("elegirMedallasGanadas: quita goat_mode si el resultado real no es goat", () => {
+  // La IA puede otorgar goat_mode en cualquier consecuencia intermedia por
+  // su cuenta — si el resultado final no es realmente GOAT, no se queda.
+  const estado = estadoBase({ medallasGanadas: ["goat_mode", "la_chispa"] });
+  const medallas = elegirMedallasGanadas(estado, "troll");
+  assert.ok(!medallas.includes("goat_mode"), "goat_mode no debería sobrevivir a un resultado troll");
+  assert.ok(medallas.includes("la_chispa"), "las demás medallas previas sí se preservan");
+});
 
 // --- calcularResumenAnio ---
 caso("calcularResumenAnio: calcula ingreso ganado e ignora items sin ingreso", () => {

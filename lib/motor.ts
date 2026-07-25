@@ -100,7 +100,18 @@ export function elegirMedallasGanadas(estado: EstadoPartida, resultado: TipoResu
   if ((estado.skills.ingles ?? 0) >= 3) medallas.add("bilingue");
   if (Object.values(estado.skills).some((v) => v >= 5)) medallas.add("modo_enfoque");
   if (estado.mentorActivo) medallas.add("red_de_oro");
-  if (resultado === "goat") medallas.add("goat_mode");
+
+  // goat_mode es la medalla más alta del juego — solo debe quedar si el
+  // resultado final realmente es GOAT. La IA puede otorgarla en cualquier
+  // consecuencia intermedia por su propio criterio narrativo (está en su
+  // vocabulario de medallas válidas para cualquier turno), así que hay que
+  // limpiarla acá si el resultado real no la respalda, sin importar qué
+  // haya quedado en estado.medallasGanadas de turnos anteriores.
+  if (resultado === "goat") {
+    medallas.add("goat_mode");
+  } else {
+    medallas.delete("goat_mode");
+  }
 
   return Array.from(medallas);
 }
