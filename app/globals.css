@@ -32,6 +32,13 @@
   --onboarding-button-mid: #f18704;
   --onboarding-button-to: #e35d02;
   --onboarding-button-border: #c94a02;
+  --onboarding-button-hover-from: #8bd94f;
+  --onboarding-button-hover-mid: #4caf37;
+  --onboarding-button-hover-to: #2f8f1e;
+  --onboarding-button-hover-border: #24710f;
+  --onboarding-option-selected-from: #9a5a2e;
+  --onboarding-option-selected-to: #6e3a17;
+  --onboarding-option-selected-border: #4d2a10;
 }
 
 @theme inline {
@@ -195,6 +202,11 @@ body {
   box-shadow: 0 6px 16px -6px rgba(180, 60, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.4);
   transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
 }
+.btn-onboarding:hover:not(:disabled) {
+  background: linear-gradient(180deg, var(--onboarding-button-hover-from) 0%, var(--onboarding-button-hover-mid) 55%, var(--onboarding-button-hover-to) 100%);
+  border-color: var(--onboarding-button-hover-border);
+  box-shadow: 0 6px 16px -6px rgba(30, 120, 10, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
 .btn-onboarding:active {
   transform: scale(0.97);
 }
@@ -213,8 +225,8 @@ body {
   transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
 }
 .onboarding-option.seleccionada {
-  background: linear-gradient(180deg, var(--onboarding-button-from) 0%, var(--onboarding-button-mid) 55%, var(--onboarding-button-to) 100%);
-  border: 1.5px solid var(--onboarding-button-border);
+  background: linear-gradient(180deg, var(--onboarding-option-selected-from) 0%, var(--onboarding-option-selected-to) 100%);
+  border: 1.5px solid var(--onboarding-option-selected-border);
   color: #ffffff;
 }
 
