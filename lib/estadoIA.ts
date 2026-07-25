@@ -60,17 +60,30 @@ export function construirEstadoIA(
 }
 
 // Sin esto, mentor_activado queda 100% a discreción de la IA y en la
-// práctica casi nunca aparece — se fuerza a partir de cierto punto para
-// que el jugador siempre vea al menos un mentor en la partida.
-export function construirInstruccionMentor(mentorActivo: string | null, totalTurnos: number): string | undefined {
-  if (mentorActivo) return undefined;
+// práctica casi nunca aparece — incluso pidiéndolo explícito por prompt la
+// IA sigue devolviendo null si ya nombró al mentor en una consecuencia
+// anterior (lo trata como "ya introducido" y no lo re-activa). Por eso
+// además de la instrucción, forzar=true le quita "null" al schema del
+// campo — con strict:true eso sí obliga a elegir un mentor real.
+export function construirInstruccionMentor(
+  mentorActivo: string | null,
+  totalTurnos: number
+): { instruccion: string | undefined; forzar: boolean } {
+  if (mentorActivo) return { instruccion: undefined, forzar: false };
   if (totalTurnos >= 4) {
-    return "El jugador todavía no tiene mentor activo después de varios turnos. DEBES introducir un mentor esta vez a través de mentor_activado (elige el que mejor encaje con el contexto: andrea, carlos, valentina, sebastian, luna, o don_jairo si viene de una racha negativa) — que se sienta orgánico dentro de la narrativa, no forzado ni anunciado.";
+    return {
+      instruccion:
+        'mentor_activo en el estado es null: NO HAY mentor activado todavía en el sistema, sin importar si ya mencionaste por nombre a alguien como Jairo/Andrea/Carlos/etc. en una consecuencia anterior — esa mención no activó nada formalmente. Esta vez el campo mentor_activado es obligatorio: pon ahí el id del mentor (el mismo personaje que ya venías narrando, o uno nuevo si no había ninguno) — andrea, carlos, valentina, sebastian, luna, o don_jairo.',
+      forzar: true,
+    };
   }
   if (totalTurnos >= 2) {
-    return "Si surge naturalmente en la narrativa, aprovecha para introducir un mentor (mentor_activado) — el jugador todavía no tiene ninguno.";
+    return {
+      instruccion: "Si surge naturalmente en la narrativa, aprovecha para introducir un mentor (mentor_activado) — el jugador todavía no tiene ninguno.",
+      forzar: false,
+    };
   }
-  return undefined;
+  return { instruccion: undefined, forzar: false };
 }
 
 // El tipo de evento (imprevisto/oportunidad) queda a discreción de la IA;

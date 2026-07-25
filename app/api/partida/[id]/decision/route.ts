@@ -77,7 +77,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const estadoIA = construirEstadoIA(partida, historial, null);
 
   const totalTurnosPrevios = partida.decisiones.length + partida.eventos.length;
-  const instruccionMentor = construirInstruccionMentor(partida.mentorActivo, totalTurnosPrevios);
+  const { instruccion: instruccionMentor, forzar: forzarMentor } = construirInstruccionMentor(
+    partida.mentorActivo,
+    totalTurnosPrevios
+  );
 
   let consecuencia;
   try {
@@ -89,7 +92,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         opcion_texto: opcion.titulo,
         tiempo_respuesta: body.tiempoRespuesta ?? 0,
       },
-      instruccionMentor
+      instruccionMentor,
+      forzarMentor
     );
   } catch (error) {
     console.error("Error procesando decisión con IA:", error);

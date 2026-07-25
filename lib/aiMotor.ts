@@ -76,7 +76,7 @@ ERRORES QUE DEBES EVITAR
 
 VOCABULARIO VÁLIDO (usar SOLO estos IDs exactos en los campos estructurados — nunca inventes IDs nuevos)
 
-medalla_desbloqueada — usar únicamente si de verdad corresponde a lo que acaba de pasar, si no, null: la_chispa, primer_peso, el_arranque, curioso, el_observador, sobreviviente, antifragil, inversor, contra_corriente, red_de_oro, bilingue, modo_enfoque, el_mentor_oculto, el_estrategas, segunda_vida, goat_mode.
+medalla_desbloqueada — usar únicamente si de verdad corresponde a lo que acaba de pasar, si no, null: la_chispa, primer_peso, el_arranque, curioso, el_observador, sobreviviente, antifragil, inversor, contra_corriente, red_de_oro, bilingue, modo_enfoque, el_mentor_oculto, el_estratega, segunda_vida, goat_mode.
 
 mentor_activado — solo si la narrativa introduce a un mentor por primera vez, si no, null: andrea (emprendedora), carlos (gerente), valentina (investigadora), sebastian (freelancer/UX), luna (creadora de contenido), don_jairo (técnico universal, aparece tras rachas negativas).
 
@@ -322,6 +322,8 @@ export async function generarEvento(estado: EstadoIA, instruccionAdicional?: str
   return { ...evento, opciones: mezclarOpciones(evento.opciones) };
 }
 
+const MENTORES_VALIDOS = ["andrea", "carlos", "valentina", "sebastian", "luna", "don_jairo"] as const;
+
 export async function procesarEleccion(
   estado: EstadoIA,
   decisionTomada: {
@@ -331,7 +333,8 @@ export async function procesarEleccion(
     campo_libre?: string;
     tiempo_respuesta: number;
   },
-  instruccionAdicional?: string
+  instruccionAdicional?: string,
+  forzarMentor?: boolean
 ): Promise<ConsecuenciaGenerada> {
   const schema = {
     type: "object",
@@ -365,7 +368,9 @@ export async function procesarEleccion(
         required: ["EMP", "INV", "EMP2", "FREE", "CRE"],
       },
       medalla_desbloqueada: { type: ["string", "null"] },
-      mentor_activado: { type: ["string", "null"] },
+      mentor_activado: forzarMentor
+        ? { type: "string", enum: MENTORES_VALIDOS, description: "Obligatorio esta vez — no puede ser null (ver instruccion_adicional)." }
+        : { type: ["string", "null"] },
       alerta_generada: { type: ["string", "null"] },
       costo_oportunidad: {
         type: ["string", "null"],
