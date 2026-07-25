@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "Partida" ADD COLUMN     "tokensCacheRead" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "tokensCacheWrite" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "tokensInput" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "tokensOutput" INTEGER NOT NULL DEFAULT 0;

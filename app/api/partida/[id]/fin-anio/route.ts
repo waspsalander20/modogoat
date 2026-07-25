@@ -6,6 +6,7 @@ import { generarAlertas } from "@/lib/perfilamiento";
 import { generarAnalisisFinal } from "@/lib/aiMotor";
 import { construirEstadoIA } from "@/lib/estadoIA";
 import type { EstadoPartida, PerfilId, Puntos } from "@/lib/types";
+import { usoVacio, sumarUso, type UsoIA } from "@/lib/aiCost";
 
 const EDAD_FIN = 30;
 
@@ -100,9 +101,12 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     null
   );
 
+  let uso: UsoIA = usoVacio();
   let analisisFinal: string | null = null;
   try {
-    const resultado = await generarAnalisisFinal(estadoIA);
+    const resultado = await generarAnalisisFinal(estadoIA, (u) => {
+      uso = sumarUso(uso, u);
+    });
     analisisFinal = resultado.narrativa;
   } catch (error) {
     console.error("Error generando análisis final con IA:", error);
@@ -124,6 +128,10 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
       patronTroll: esTroll,
       analisisFinal,
       turnoActual: Prisma.DbNull,
+      tokensInput: { increment: uso.inputTokens },
+      tokensOutput: { increment: uso.outputTokens },
+      tokensCacheWrite: { increment: uso.cacheWriteTokens },
+      tokensCacheRead: { increment: uso.cacheReadTokens },
     },
   });
 

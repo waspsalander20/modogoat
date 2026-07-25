@@ -4,6 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { formatoPesos } from "@/lib/format";
 import { nombreSkill } from "@/lib/data/skills";
 import { medalla } from "@/lib/data/medallas";
+import { calcularCostoUsd } from "@/lib/aiCost";
+
+// TRM aproximada solo para mostrar una referencia en pesos — no es una tasa
+// en vivo, ajustar si se vuelve muy vieja. El costo real que Anthropic
+// factura siempre es en USD.
+const TRM_APROX_COP = 4000;
+const MULTIPLICADOR_PRECIO_SUGERIDO = 5;
 
 export default async function DashboardIndividualPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -16,6 +23,15 @@ export default async function DashboardIndividualPage({ params }: { params: Prom
   if (!partida) notFound();
 
   const skillsFinales = (partida.skillsFinales as Record<string, number>) ?? {};
+
+  const costoUsd = calcularCostoUsd({
+    inputTokens: partida.tokensInput,
+    outputTokens: partida.tokensOutput,
+    cacheWriteTokens: partida.tokensCacheWrite,
+    cacheReadTokens: partida.tokensCacheRead,
+  });
+  const costoCop = costoUsd * TRM_APROX_COP;
+  const precioSugeridoCop = costoCop * MULTIPLICADOR_PRECIO_SUGERIDO;
 
   return (
     <main className="flex flex-1 flex-col px-6 py-10 max-w-2xl mx-auto w-full gap-6">
@@ -47,6 +63,16 @@ export default async function DashboardIndividualPage({ params }: { params: Prom
             <Row key={perfil} label={perfil} value={puntos.toString()} />
           ))}
         </div>
+      </div>
+
+      <div className="card p-5">
+        <h2 className="font-extrabold mb-3">Costo de IA (real)</h2>
+        <Row label="Costo real" value={`US$ ${costoUsd.toFixed(4)} · ${formatoPesos(Math.round(costoCop))} (aprox.)`} />
+        <Row label={`Precio sugerido (x${MULTIPLICADOR_PRECIO_SUGERIDO})`} value={formatoPesos(Math.round(precioSugeridoCop))} />
+        <Row
+          label="Tokens (in / out / caché escr. / caché lect.)"
+          value={`${partida.tokensInput.toLocaleString("es-CO")} / ${partida.tokensOutput.toLocaleString("es-CO")} / ${partida.tokensCacheWrite.toLocaleString("es-CO")} / ${partida.tokensCacheRead.toLocaleString("es-CO")}`}
+        />
       </div>
 
       {partida.areaLibre && (

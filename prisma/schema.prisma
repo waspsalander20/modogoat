@@ -69,6 +69,13 @@ model Partida {
   turnoActual Json?
   analisisFinal String?
 
+  // Costo real de IA acumulado de esta partida (para el dashboard de
+  // Sapiencia — costo real por ahora, luego se multiplica para el precio).
+  tokensInput      Int @default(0)
+  tokensOutput     Int @default(0)
+  tokensCacheWrite Int @default(0)
+  tokensCacheRead  Int @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

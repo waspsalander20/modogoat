@@ -6,6 +6,7 @@ import { construirEstadoIA, construirInstruccionMentor, construirInstruccionTipo
 import { sanitizarTextoLibre } from "@/lib/sanitizarTexto";
 import { aplicarSkills, sumarPuntos, calcularPerfil } from "@/lib/motor";
 import type { Puntos } from "@/lib/types";
+import { usoVacio, sumarUso, type UsoIA } from "@/lib/aiCost";
 
 interface Body {
   opcionLetra: "A" | "B" | "C" | "D";
@@ -54,9 +55,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const rutaEntrada = partida.rutaEntrada ?? opcion.titulo;
     const estadoConArea = construirEstadoIA({ ...partida, areaLibre, rutaEntrada }, historial, null);
 
+    let uso: UsoIA = usoVacio();
     let siguienteDecision: DecisionGenerada;
     try {
-      siguienteDecision = await generarDecisionDeAnio(estadoConArea, { pasoInicialElegido: opcion.titulo });
+      siguienteDecision = await generarDecisionDeAnio(estadoConArea, { pasoInicialElegido: opcion.titulo }, (u) => {
+        uso = sumarUso(uso, u);
+      });
     } catch (error) {
       console.error("Error generando el segundo paso inicial con IA:", error);
       return NextResponse.json({ error: "No pudimos continuar tu historia. Intenta de nuevo." }, { status: 502 });
@@ -69,6 +73,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         rutaEntrada,
         areaLibre,
         turnoActual: nuevoTurnoInicial as unknown as Prisma.InputJsonValue,
+        tokensInput: { increment: uso.inputTokens },
+        tokensOutput: { increment: uso.outputTokens },
+        tokensCacheWrite: { increment: uso.cacheWriteTokens },
+        tokensCacheRead: { increment: uso.cacheReadTokens },
       },
     });
 
@@ -83,6 +91,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     totalTurnosPrevios
   );
 
+  let uso: UsoIA = usoVacio();
   let consecuencia;
   try {
     consecuencia = await procesarEleccion(
@@ -94,7 +103,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         tiempo_respuesta: body.tiempoRespuesta ?? 0,
       },
       instruccionMentor,
-      forzarMentor
+      forzarMentor,
+      (u) => {
+        uso = sumarUso(uso, u);
+      }
     );
   } catch (error) {
     console.error("Error procesando decisión con IA:", error);
@@ -126,7 +138,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   let nuevoTurno = null;
   if (eventosEsteAnio < 2) {
     try {
-      const evento = await generarEvento(estadoIA, construirInstruccionTipoEvento(partida.eventos));
+      const evento = await generarEvento(estadoIA, construirInstruccionTipoEvento(partida.eventos), (u) => {
+        uso = sumarUso(uso, u);
+      });
       nuevoTurno = { tipo: "evento" as const, evento };
     } catch (error) {
       console.error("Error generando evento con IA:", error);
@@ -166,6 +180,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         alertas,
         mentorActivo,
         turnoActual: nuevoTurno ? (nuevoTurno as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
+        tokensInput: { increment: uso.inputTokens },
+        tokensOutput: { increment: uso.outputTokens },
+        tokensCacheWrite: { increment: uso.cacheWriteTokens },
+        tokensCacheRead: { increment: uso.cacheReadTokens },
       },
     }),
   ]);

@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { PerfilId, Puntos } from "@/lib/types";
+import type { UsoIA } from "@/lib/aiCost";
 
 const anthropic = new Anthropic();
 // Sonnet 5, no Opus — el usuario priorizó velocidad de respuesta sobre
@@ -212,7 +213,8 @@ async function llamarHerramienta<T>(
   toolName: string,
   toolSchema: object,
   extra?: { decision_tomada?: unknown; instruccion_adicional?: string },
-  maxTokens = 1024
+  maxTokens = 1024,
+  registrarUso?: (uso: UsoIA) => void
 ): Promise<T> {
   const userContent = JSON.stringify({
     accion,
@@ -234,6 +236,13 @@ async function llamarHerramienta<T>(
     ],
     tool_choice: { type: "tool", name: toolName },
     messages: [{ role: "user", content: userContent }],
+  });
+
+  registrarUso?.({
+    inputTokens: response.usage.input_tokens ?? 0,
+    outputTokens: response.usage.output_tokens ?? 0,
+    cacheWriteTokens: response.usage.cache_creation_input_tokens ?? 0,
+    cacheReadTokens: response.usage.cache_read_input_tokens ?? 0,
   });
 
   const toolUse = response.content.find((b) => b.type === "tool_use");
@@ -291,7 +300,8 @@ function mezclarOpciones<T extends { letra: string }>(opciones: T[]): T[] {
 
 export async function generarDecisionDeAnio(
   estado: EstadoIA,
-  contexto?: { pasoInicialElegido?: string }
+  contexto?: { pasoInicialElegido?: string },
+  registrarUso?: (uso: UsoIA) => void
 ): Promise<DecisionGenerada> {
   const esPrimeraDecisionDelJuego = estado.historial_decisiones.length === 0 && !contexto?.pasoInicialElegido;
   const instruccion_adicional = contexto?.pasoInicialElegido
@@ -306,7 +316,7 @@ export async function generarDecisionDeAnio(
     tiene_campo_libre: boolean;
     texto_campo_libre?: string;
     opciones: OpcionGenerada[];
-  }>("generar_inicio_anio", estado, "presentar_decision", DECISION_SCHEMA, { instruccion_adicional });
+  }>("generar_inicio_anio", estado, "presentar_decision", DECISION_SCHEMA, { instruccion_adicional }, 1024, registrarUso);
   validarOpciones(raw.opciones);
 
   return {
@@ -318,10 +328,20 @@ export async function generarDecisionDeAnio(
   };
 }
 
-export async function generarEvento(estado: EstadoIA, instruccionAdicional?: string): Promise<EventoGenerado> {
-  const evento = await llamarHerramienta<EventoGenerado>("generar_evento", estado, "presentar_evento", EVENTO_SCHEMA, {
-    instruccion_adicional: instruccionAdicional,
-  });
+export async function generarEvento(
+  estado: EstadoIA,
+  instruccionAdicional?: string,
+  registrarUso?: (uso: UsoIA) => void
+): Promise<EventoGenerado> {
+  const evento = await llamarHerramienta<EventoGenerado>(
+    "generar_evento",
+    estado,
+    "presentar_evento",
+    EVENTO_SCHEMA,
+    { instruccion_adicional: instruccionAdicional },
+    1024,
+    registrarUso
+  );
   validarOpciones(evento.opciones);
   return { ...evento, opciones: mezclarOpciones(evento.opciones) };
 }
@@ -338,7 +358,8 @@ export async function procesarEleccion(
     tiempo_respuesta: number;
   },
   instruccionAdicional?: string,
-  forzarMentor?: boolean
+  forzarMentor?: boolean,
+  registrarUso?: (uso: UsoIA) => void
 ): Promise<ConsecuenciaGenerada> {
   const schema = {
     type: "object",
@@ -402,10 +423,15 @@ export async function procesarEleccion(
     mentor_activado: string | null;
     alerta_generada: string | null;
     costo_oportunidad: string | null;
-  }>("generar_consecuencia", estado, "procesar_turno", schema, {
-    decision_tomada: decisionTomada,
-    instruccion_adicional: instruccionAdicional,
-  });
+  }>(
+    "generar_consecuencia",
+    estado,
+    "procesar_turno",
+    schema,
+    { decision_tomada: decisionTomada, instruccion_adicional: instruccionAdicional },
+    1024,
+    registrarUso
+  );
 
   const skillsModificadas: Record<string, number> = {};
   for (const { skill, delta } of raw.skills_modificadas ?? []) {
@@ -428,7 +454,10 @@ export interface AnalisisFinal {
   narrativa: string;
 }
 
-export async function generarAnalisisFinal(estado: EstadoIA): Promise<AnalisisFinal> {
+export async function generarAnalisisFinal(
+  estado: EstadoIA,
+  registrarUso?: (uso: UsoIA) => void
+): Promise<AnalisisFinal> {
   const schema = {
     type: "object",
     additionalProperties: false,
@@ -442,5 +471,13 @@ export async function generarAnalisisFinal(estado: EstadoIA): Promise<AnalisisFi
     required: ["narrativa"],
   };
 
-  return llamarHerramienta<AnalisisFinal>("generar_analisis_final", estado, "presentar_analisis", schema, undefined, 1536);
+  return llamarHerramienta<AnalisisFinal>(
+    "generar_analisis_final",
+    estado,
+    "presentar_analisis",
+    schema,
+    undefined,
+    1536,
+    registrarUso
+  );
 }

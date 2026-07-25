@@ -7,6 +7,7 @@ import { calcularResumenAnio } from "@/lib/motor";
 import { nombreSkill } from "@/lib/data/skills";
 import { medalla } from "@/lib/data/medallas";
 import type { PerfilId } from "@/lib/types";
+import { usoVacio, sumarUso, type UsoIA } from "@/lib/aiCost";
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -79,9 +80,12 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const ultimoEvento = partida.eventos.length > 0 ? partida.eventos[partida.eventos.length - 1].nombre : null;
   const estadoIA = construirEstadoIA(partida, historial, ultimoEvento);
 
+  let uso: UsoIA = usoVacio();
   let decision;
   try {
-    decision = await generarDecisionDeAnio(estadoIA);
+    decision = await generarDecisionDeAnio(estadoIA, undefined, (u) => {
+      uso = sumarUso(uso, u);
+    });
   } catch (error) {
     console.error("Error generando decisión con IA:", error);
     return NextResponse.json({ error: "No pudimos generar tu historia. Intenta de nuevo." }, { status: 502 });
@@ -91,7 +95,13 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
   await prisma.partida.update({
     where: { id },
-    data: { turnoActual: turno as unknown as Prisma.InputJsonValue },
+    data: {
+      turnoActual: turno as unknown as Prisma.InputJsonValue,
+      tokensInput: { increment: uso.inputTokens },
+      tokensOutput: { increment: uso.outputTokens },
+      tokensCacheWrite: { increment: uso.cacheWriteTokens },
+      tokensCacheRead: { increment: uso.cacheReadTokens },
+    },
   });
 
   return NextResponse.json({ terminado: false, anio: partida.edadActual, turno });
