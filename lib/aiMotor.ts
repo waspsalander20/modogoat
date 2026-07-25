@@ -28,7 +28,7 @@ REGLAS NARRATIVAS OBLIGATORIAS
 
 2. Tono — español neutro colombiano en segunda persona con TUTEO ("tú", "te", "tu"). IMPORTANTE: nunca uses voseo ("vos", "tenés", "podés", "sos", "querés") — aunque el paisa hablado en Medellín usa voseo, el juego usa tuteo neutro para llegar a audiencia de toda Colombia. Sin tecnicismos psicológicos — nunca menciones CHASIDE, Big Five, MMMG, VAK, "perfil", "test" o "evaluación" en el texto narrativo que ve el jugador. Lenguaje juvenil pero no forzado. Consecuencias narradas con detalle cinematográfico — mostrar, no decir. Citas de diálogo con formato: > *"texto"*. Siempre hay un insight al final de cada consecuencia.
 
-2b. Extensión — el jugador está en el celular, cada consecuencia se lee en 15-25 segundos. Máximo 2 párrafos cortos (3-4 líneas cada uno) por consecuencia. Corta apenas se resuelve la elección inmediata: no sigas narrando semanas o meses de historia después. Si de esa consecuencia surge naturalmente una nueva oportunidad, un trabajo, una propuesta — NO la seas tú quien decide qué hace el jugador con ella (ej: nunca escribas "aceptaste el trabajo y ganaste $X"). Déjala como gancho abierto (ej: "el vecino te pregunta si quieres hacerlo fijo") — el próximo evento u decisión del juego, con opciones reales A/B/C, es donde el jugador decide qué hacer con ella.
+2b. Extensión — el jugador está en el celular y esto se lee muchas veces por partida: la longitud es lo primero que hay que cuidar para que el juego no se sienta pesado. Máximo 1 párrafo corto de 2-3 líneas por consecuencia. Solo si hay una cita de diálogo que de verdad aporta, puedes usar un segundo párrafo cortito para ella — nunca más de 2 en total, y nunca un tercero. Corta apenas se resuelve la elección inmediata: no sigas narrando semanas o meses de historia después. Si de esa consecuencia surge naturalmente una nueva oportunidad, un trabajo, una propuesta — NO la seas tú quien decide qué hace el jugador con ella (ej: nunca escribas "aceptaste el trabajo y ganaste $X"). Déjala como gancho abierto (ej: "el vecino te pregunta si quieres hacerlo fijo") — el próximo evento u decisión del juego, con opciones reales A/B/C, es donde el jugador decide qué hacer con ella.
 
 3. Las opciones SIEMPRE tienen orden rotatorio — nunca pongas la "mejor" opción siempre en el mismo lugar. El jugador no debe poder adivinar la respuesta correcta por posición.
 
@@ -169,7 +169,7 @@ const DECISION_SCHEMA = {
   additionalProperties: false,
   properties: {
     titulo: { type: "string" },
-    texto: { type: "string", description: "2-4 líneas de contexto narrativo antes de las opciones" },
+    texto: { type: "string", description: "Máximo 2-3 líneas cortas de contexto narrativo antes de las opciones — el jugador lee esto en el celular, entre más corto mejor." },
     tiene_campo_libre: { type: "boolean" },
     texto_campo_libre: { type: "string", description: "Solo si tiene_campo_libre es true" },
     opciones: OPCIONES_DECISION_SCHEMA,
@@ -184,7 +184,7 @@ const EVENTO_SCHEMA = {
     tipo: { type: "string", enum: ["imprevisto", "oportunidad"] },
     nombre: { type: "string" },
     emoji: { type: "string" },
-    texto: { type: "string", description: "2-4 líneas de contexto narrativo antes de las opciones" },
+    texto: { type: "string", description: "Máximo 2-3 líneas cortas de contexto narrativo antes de las opciones — el jugador lee esto en el celular, entre más corto mejor." },
     opciones: {
       type: "array",
       description: "Exactamente 4 opciones, una por cada letra A, B, C y D.",
@@ -365,7 +365,7 @@ export async function procesarEleccion(
     type: "object",
     additionalProperties: false,
     properties: {
-      narrativa: { type: "string", description: "Máximo 2 párrafos cortos en markdown (ver regla 2b), con diálogos citados como blockquote. Corta en la resolución inmediata, sin auto-resolver oportunidades futuras." },
+      narrativa: { type: "string", description: "Máximo 1 párrafo corto (2-3 líneas), 2 solo si hay una cita de diálogo que aporte (ver regla 2b), en markdown. Corta en la resolución inmediata, sin auto-resolver oportunidades futuras." },
       ingreso_nuevo: { type: "number", description: "Nuevo ingreso mensual en pesos colombianos (valor absoluto, no delta)" },
       skills_modificadas: {
         type: "array",
@@ -465,7 +465,7 @@ export async function generarAnalisisFinal(
       narrativa: {
         type: "string",
         description:
-          "Markdown completo con: título con el nombre del jugador, cierre narrativo de la historia (3-5 párrafos, cinematográfico, sin jerga técnica), el patrón más importante de su perfil, y una frase de cierre de 3-4 líneas que resuma quién es. NO menciones CHASIDE, Big Five, MMMG, VAK ni la palabra 'perfil vocacional' — esto lo lee el jugador, no Sapiencia.",
+          "Markdown completo con: título con el nombre del jugador, cierre narrativo de la historia (2-3 párrafos cortos, cinematográfico, sin jerga técnica — esto también se lee en el celular, no te extiendas), el patrón más importante de su perfil, y una frase de cierre de 2-3 líneas que resuma quién es. NO menciones CHASIDE, Big Five, MMMG, VAK ni la palabra 'perfil vocacional' — esto lo lee el jugador, no Sapiencia.",
       },
     },
     required: ["narrativa"],
