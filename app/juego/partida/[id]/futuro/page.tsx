@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { calcularSalarioProyectado } from "@/lib/motor";
 import { formatoPesos } from "@/lib/format";
+import { normalizarPais } from "@/lib/data/paises";
 import { NOMBRES_PERFIL, CARGOS_POR_PERFIL } from "@/lib/data/perfiles";
 import { SKILLS_TRANSVERSALES, SKILLS_PERFIL, nombreSkill, emojiSkill } from "@/lib/data/skills";
 import type { PerfilId } from "@/lib/types";
@@ -9,12 +10,13 @@ import type { PerfilId } from "@/lib/types";
 export default async function FuturoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const partida = await prisma.partida.findUnique({ where: { id } });
+  const partida = await prisma.partida.findUnique({ where: { id }, include: { jugador: true } });
   if (!partida) notFound();
 
+  const pais = normalizarPais(partida.jugador.pais);
   const perfilDominante = (partida.perfilDominante as PerfilId) ?? "EMP";
   const skills = (partida.skills as Record<string, number>) ?? {};
-  const salario = calcularSalarioProyectado(perfilDominante, skills);
+  const salario = calcularSalarioProyectado(perfilDominante, skills, pais);
   const nivelIngles = skills.ingles ?? 0;
 
   const skillsClave = [...SKILLS_TRANSVERSALES, ...SKILLS_PERFIL[perfilDominante]];
@@ -34,7 +36,7 @@ export default async function FuturoPage({ params }: { params: Promise<{ id: str
         <div className="text-xs font-extrabold uppercase tracking-wide text-goat-accent-solid mb-2">
           Salario proyectado
         </div>
-        <div className="text-3xl font-extrabold mb-1">{formatoPesos(salario)}</div>
+        <div className="text-3xl font-extrabold mb-1">{formatoPesos(salario, pais)}</div>
         <div className="text-goat-ink-muted text-xs">al mes, como {NOMBRES_PERFIL[perfilDominante]}</div>
         {nivelIngles < 4 && (
           <div className="mt-3 text-xs bg-goat-accent-tint text-goat-accent-solid rounded-xl px-3 py-2">

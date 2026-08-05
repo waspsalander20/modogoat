@@ -9,6 +9,7 @@ export interface EncabezadoPartida {
   edadActual: number;
   ingresoActual: number;
   skills: Record<string, number>;
+  pais: string;
 }
 
 interface ContextoPartidaHeader {
@@ -46,6 +47,7 @@ export function PartidaHeaderProvider({
           edadActual: p.edadActual,
           ingresoActual: p.ingresoActual,
           skills: p.skills ?? {},
+          pais: p.jugador.pais,
         });
       })
       .catch(() => {});

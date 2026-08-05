@@ -4,11 +4,9 @@ import Image from "next/image";
 import { usePartidaHeader } from "./PartidaHeaderContext";
 import { formatoPesos } from "@/lib/format";
 import { NOMBRES_PERFIL } from "@/lib/data/perfiles";
+import { normalizarPais } from "@/lib/data/paises";
+import { DURACION_ANIOS } from "@/lib/motor";
 import type { PerfilId } from "@/lib/types";
-
-// La partida dura 10 años desde la edad de inicio, no siempre hasta los 30
-// (ver también app/api/partida/[id]/fin-anio/route.ts).
-const DURACION_ANIOS = 10;
 
 export default function Header() {
   const { datos } = usePartidaHeader();
@@ -48,7 +46,7 @@ export default function Header() {
           className="flex items-center gap-1 text-white font-extrabold text-sm rounded-full px-3 py-1.5"
           style={{ background: "var(--game-income-pill)" }}
         >
-          {formatoPesos(datos.ingresoActual)}/mes
+          {formatoPesos(datos.ingresoActual, normalizarPais(datos.pais))}/mes
         </div>
       </div>
 
