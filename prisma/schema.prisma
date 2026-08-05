@@ -11,16 +11,62 @@ datasource db {
   provider = "postgresql"
 }
 
+// Programa representa un cliente institucional (colegio, gobierno) que
+// despliega el juego — hoy solo país + nombre, deliberadamente mínimo. Ver
+// la auditoría del motor (sección 14) para la arquitectura de capas
+// completa: Programa/Vertical/Partner quedan diferidas hasta que haya
+// evidencia real de necesitarlas, no se construyen especulativamente.
+model Programa {
+  id                 String    @id @default(cuid())
+  slug               String    @unique
+  nombre             String
+  pais               String
+  // Cuántas partidas le corresponden a cada jugador de este programa antes
+  // de que su informe comparativo se considere "completo" (ver
+  // lib/data/paquete.ts). Null = usa el default global (3). Variable porque
+  // un cliente institucional futuro podría pedir un paquete distinto.
+  partidasPorPaquete Int?
+  createdAt          DateTime  @default(now())
+  jugadores          Jugador[]
+}
+
 model Jugador {
-  id        String    @id @default(cuid())
-  nombre    String
-  edad      Int
-  genero    String
-  ciudad    String    @default("Medellín")
-  contexto  String
-  trabaja   String
-  createdAt DateTime  @default(now())
-  partidas  Partida[]
+  id     String @id @default(cuid())
+  nombre String
+
+  // Cuenta — email/contraseña se piden al registrarse, ANTES de que exista
+  // cualquier partida. edad/genero/contexto/trabaja en cambio se piden en el
+  // onboarding de la primera partida, por eso son opcionales acá: quedan en
+  // null entre el registro y ese primer onboarding, y de ahí en adelante
+  // siempre están set (toda partida requiere haber pasado por onboarding).
+  email                  String?   @unique
+  passwordHash           String?
+  // Arranca en false — el jugador queda pendiente de activación manual
+  // desde el dashboard (piloto con colegios: solo se activan cuentas de
+  // alumnos con consentimiento ya verificado por la institución).
+  activo                 Boolean   @default(false)
+  // Confirmación de correo (Resend) — informativa por ahora, no bloquea el
+  // login (ese gate ya lo cumple "activo"). Sirve para saber si el jugador
+  // realmente es dueño del correo que puso.
+  emailConfirmado        Boolean   @default(false)
+  emailConfirmacionToken String?   @unique
+  // Recuperar contraseña — token de un solo uso con expiración corta.
+  resetPasswordToken     String?   @unique
+  resetPasswordExpira    DateTime?
+  edad                   Int?
+  genero                 String?
+  ciudad                 String    @default("Medellín")
+  // País del jugador — vive acá (no solo en Programa) porque a futuro habrá
+  // jugadores directos sin ningún programa institucional de por medio (ej.
+  // un padre que compra el juego para su hijo). Programa.pais solo
+  // pre-llena este campo cuando el jugador entra desde un link institucional.
+  pais                   String    @default("CO")
+  contexto               String?
+  trabaja                String?
+  programaId             String?
+  programa               Programa? @relation(fields: [programaId], references: [id])
+  createdAt              DateTime  @default(now())
+  partidas               Partida[]
 }
 
 model Partida {
@@ -51,6 +97,11 @@ model Partida {
   aniosEstancado Int     @default(0)
   mentorActivo   String?
   estado         String  @default("onboarding") // onboarding | jugando | terminado
+  // Cuántas veces ya apareció La Cabrita (amiga/mascota, distinta de los
+  // mentores profesionales — ver regla 7b en aiMotor.ts) reflexionando sobre
+  // priorizar plata sobre salud/familia. Tope de 3 por partida para que no
+  // se sienta como un sermón — se enforce en código, no solo en el prompt.
+  vecesCabrita   Int     @default(0)
 
   // Resultado
   resultadoTipo   String?
@@ -58,6 +109,12 @@ model Partida {
   skillsFinales   Json?
   medallasGanadas String[] @default([])
   alertas         String[] @default([])
+  // Respuesta a la reflexión final (¿te sientes conforme/feliz con tu
+  // camino?) — solo se pregunta si el ingreso ya cruzó el umbral económico
+  // de GOAT; null significa "no se le preguntó" (nunca calificó, o la
+  // partida terminó antes de esta versión). El GOAT exige feliz === true,
+  // no solo el ingreso (ver determinarResultado en lib/motor.ts).
+  felizFinal      Boolean?
 
   // Anti-troll
   tiempoPromedio Float?
@@ -66,7 +123,7 @@ model Partida {
   // Motor narrativo con IA (ver ModoGOAT_Prompt_Motor.md): decisión o evento
   // generado y pendiente de respuesta, para no regenerar contenido distinto
   // en cada recarga de pantalla.
-  turnoActual Json?
+  turnoActual   Json?
   analisisFinal String?
 
   // Costo real de IA acumulado de esta partida (para el dashboard de
@@ -106,6 +163,7 @@ model DecisionJugada {
   puntosSumados       Json
   medallaDesbloqueada String?
   costoOportunidad    String?
+  cabritaReflexion    String?
 
   createdAt DateTime @default(now())
 }
@@ -126,8 +184,10 @@ model EventoJugado {
 
   ingresoAntes        Int?
   ingresoDespues      Int?
+  skillsSubidas       Json    @default("{}")
   medallaDesbloqueada String?
   costoOportunidad    String?
+  cabritaReflexion    String?
 
   createdAt DateTime @default(now())
 }
