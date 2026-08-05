@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DASHBOARD_COOKIE, tokenEsperado } from "@/lib/dashboardAuth";
+import { JUGADOR_COOKIE, jugadorIdDeToken } from "@/lib/jugadorAuth";
 
 export function proxy(request: NextRequest) {
   if (request.nextUrl.pathname === "/dashboard/login") {
@@ -21,9 +22,21 @@ export function proxy(request: NextRequest) {
     }
   }
 
+  // Arrancar una partida requiere cuenta — solo esta puerta de entrada.
+  // Las páginas de una partida/resultado/informe ya creada quedan igual que
+  // hoy (accesibles por link directo, sin sesión), eso es alcance aparte.
+  if (request.nextUrl.pathname.startsWith("/juego/onboarding")) {
+    const jugadorId = jugadorIdDeToken(request.cookies.get(JUGADOR_COOKIE)?.value);
+    if (!jugadorId) {
+      const url = new URL("/juego/login", request.url);
+      url.searchParams.set("next", request.nextUrl.pathname + request.nextUrl.search);
+      return NextResponse.redirect(url);
+    }
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/api/dashboard/:path*"],
+  matcher: ["/dashboard/:path*", "/api/dashboard/:path*", "/juego/onboarding/:path*"],
 };

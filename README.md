@@ -96,8 +96,23 @@ eso, jugar una partida completa a mano es la única forma real de probar.
    - `DATABASE_URL` — la provee el plugin de Postgres de Railway.
    - `DASHBOARD_PASSWORD` — contraseña del dashboard de Sapiencia (elegí una
      fuerte; no es la misma que uses en local).
+   - `JUGADOR_SESSION_SECRET` — firma la cookie de sesión de cuentas de
+     jugador (ver `lib/jugadorAuth.ts`). Elegí un secreto fuerte y distinto
+     al de local — si esto se filtra, cualquiera puede falsificar sesiones.
    - `ANTHROPIC_API_KEY` — clave de la API de Claude. Sin esto el juego no
      puede generar contenido (ver "Motor narrativo con IA" arriba).
+   - `RESEND_API_KEY` — clave de Resend (resend.com) para los correos de
+     confirmación de cuenta y recuperar contraseña (ver `lib/email/`). Sin
+     esto la app sigue funcionando, pero esos correos solo quedan logueados,
+     no se envían de verdad.
+   - `RESEND_FROM` — remitente de esos correos, ej.
+     `"Modo GOAT <no-responder@modogoat.io>"` — requiere que ese dominio
+     esté verificado en Resend (Dashboard → Domains, agregar los registros
+     DNS de SPF/DKIM).
+   - `NEXT_PUBLIC_APP_URL` — dominio público de producción (ej.
+     `https://modogoat.io`), sin `/` al final. Se usa para armar los links
+     absolutos dentro de los correos (confirmar cuenta, restablecer
+     contraseña) — si queda mal, esos links no van a apuntar al sitio real.
 4. Build command: `npm run build` (por defecto). Start command: `npm run start`.
 5. Antes del primer deploy (o en cada deploy con cambios de schema), corré
    las migraciones contra la base de Railway:
