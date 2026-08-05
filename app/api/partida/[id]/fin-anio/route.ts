@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/lib/generated/prisma/client";
-import { calcularGastos, determinarResultado, elegirMedallasGanadas } from "@/lib/motor";
-import { generarAlertas } from "@/lib/perfilamiento";
-import { generarAnalisisFinal } from "@/lib/aiMotor";
+import { calcularGastos, calificaParaGoatEconomico, DURACION_ANIOS } from "@/lib/motor";
+import { normalizarPais } from "@/lib/data/paises";
+import { generarReflexionFinal } from "@/lib/aiMotor";
 import { construirEstadoIA } from "@/lib/estadoIA";
-import type { EstadoPartida, PerfilId, Puntos } from "@/lib/types";
+import { finalizarPartidaAhora } from "@/lib/finalizacion";
 import { usoVacio, sumarUso, type UsoIA } from "@/lib/aiCost";
-
-// La partida dura 10 años desde la edad de inicio del jugador, no siempre
-// "hasta los 30" — alguien que empieza a los 16 termina a los 26, alguien
-// que empieza a los 17 termina a los 27.
-const DURACION_ANIOS = 10;
 
 export async function POST(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -33,7 +28,8 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   const seEstanco = decisionEsteAnio ? decisionEsteAnio.ingresoDespues <= decisionEsteAnio.ingresoAntes : true;
   const aniosEstancado = seEstanco ? partida.aniosEstancado + 1 : 0;
 
-  const porcentajeGastos = calcularGastos(partida.edadActual);
+  const paisId = normalizarPais(partida.jugador.pais);
+  const porcentajeGastos = calcularGastos(partida.edadActual, paisId);
   const ahorros = partida.ahorros + Math.round(partida.ingresoActual * (1 - porcentajeGastos));
   const nuevaEdad = partida.edadActual + 1;
   const edadFin = partida.edadInicio + DURACION_ANIOS;
@@ -52,68 +48,40 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ terminado: false, edadActual: nuevaEdad });
   }
 
-  const estado: EstadoPartida = {
-    id: partida.id,
-    nombre: partida.jugador.nombre,
-    edadInicio: partida.edadInicio,
-    edadActual: nuevaEdad,
-    ingreso: partida.ingresoActual,
-    ahorros,
-    puntos: partida.puntosPerfil as unknown as Puntos,
-    skills: partida.skills as Record<string, number>,
-    mentorActivo: partida.mentorActivo,
-    medallasGanadas: partida.medallasGanadas,
-    decisiones: partida.decisiones.map((d) => ({
-      anio: d.anio,
-      decisionId: d.decisionId,
-      opcionElegida: d.opcionElegida,
-      campoLibre: d.campoLibre ?? undefined,
-      tiempoRespuesta: d.tiempoRespuesta,
-      ingresoAntes: d.ingresoAntes,
-      ingresoDespues: d.ingresoDespues,
-      skillsSubidas: d.skillsSubidas as Record<string, number>,
-      puntosSumados: d.puntosSumados as unknown as Puntos,
-    })),
-    eventos: partida.eventos.map((e) => ({
-      anio: e.anio,
-      tipoEvento: e.tipoEvento as "imprevisto" | "oportunidad",
-      eventoId: e.eventoId,
-      opcionElegida: e.opcionElegida,
-      tiempoRespuesta: e.tiempoRespuesta,
-    })),
-    aniosEstancado,
-    estado: "terminado",
-  };
+  // Es el último año de la partida. Antes de cerrar, si el ingreso ya
+  // cruzó el umbral económico de GOAT y todavía no se le hizo la
+  // reflexión final, se le pregunta si de verdad está en paz con su
+  // camino — el GOAT exige las dos cosas, no solo la plata (ver
+  // determinarResultado en lib/motor.ts). Se guarda como un turno
+  // pendiente más (mismo patrón que decision/evento) para no
+  // regenerar la pregunta si el cliente recarga.
+  if (calificaParaGoatEconomico(partida.ingresoActual, paisId) && partida.felizFinal === null) {
+    const historial = [
+      ...partida.decisiones.map((d) => ({ anio: d.anio, titulo: d.titulo, opcionElegida: d.opcionElegida, opcionTexto: d.opcionTexto })),
+      ...partida.eventos.map((e) => ({ anio: e.anio, titulo: e.nombre, opcionElegida: e.opcionElegida, opcionTexto: e.opcionTexto })),
+    ].sort((a, b) => a.anio - b.anio);
+    const estadoIA = construirEstadoIA({ ...partida, edadActual: nuevaEdad }, historial, null);
 
-  const perfilDominante = (partida.perfilDominante as PerfilId) ?? "EMP";
-  const esTroll = partida.patronTroll || aniosEstancado >= 4;
-  const resultadoTipo = determinarResultado(estado, perfilDominante, esTroll);
-  const alertas = generarAlertas(
-    estado,
-    { trabaja: partida.jugador.trabaja, contexto: partida.jugador.contexto },
-    esTroll
-  );
-  const medallas = elegirMedallasGanadas(estado, resultadoTipo);
-
-  const historial = [
-    ...partida.decisiones.map((d) => ({ anio: d.anio, titulo: d.titulo, opcionElegida: d.opcionElegida, opcionTexto: d.opcionTexto })),
-    ...partida.eventos.map((e) => ({ anio: e.anio, titulo: e.nombre, opcionElegida: e.opcionElegida, opcionTexto: e.opcionTexto })),
-  ].sort((a, b) => a.anio - b.anio);
-  const estadoIA = construirEstadoIA(
-    { ...partida, edadActual: nuevaEdad, mentorActivo: partida.mentorActivo },
-    historial,
-    null
-  );
-
-  let uso: UsoIA = usoVacio();
-  let analisisFinal: string | null = null;
-  try {
-    const resultado = await generarAnalisisFinal(estadoIA, (u) => {
+    let uso: UsoIA = usoVacio();
+    const reflexion = await generarReflexionFinal(estadoIA, (u) => {
       uso = sumarUso(uso, u);
     });
-    analisisFinal = resultado.narrativa;
-  } catch (error) {
-    console.error("Error generando análisis final con IA:", error);
+
+    await prisma.partida.update({
+      where: { id },
+      data: {
+        edadActual: nuevaEdad,
+        ahorros,
+        aniosEstancado,
+        aniosJugados: partida.aniosJugados + 1,
+        turnoActual: { tipo: "reflexion_final", reflexion } as unknown as Prisma.InputJsonValue,
+        tokensInput: { increment: uso.inputTokens },
+        tokensOutput: { increment: uso.outputTokens },
+        tokensCacheWrite: { increment: uso.cacheWriteTokens },
+        tokensCacheRead: { increment: uso.cacheReadTokens },
+      },
+    });
+    return NextResponse.json({ terminado: false, edadActual: nuevaEdad });
   }
 
   await prisma.partida.update({
@@ -123,21 +91,10 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
       ahorros,
       aniosEstancado,
       aniosJugados: partida.aniosJugados + 1,
-      estado: "terminado",
-      resultadoTipo,
-      ingresoFinal: partida.ingresoActual,
-      skillsFinales: partida.skills as object,
-      medallasGanadas: medallas,
-      alertas,
-      patronTroll: esTroll,
-      analisisFinal,
       turnoActual: Prisma.DbNull,
-      tokensInput: { increment: uso.inputTokens },
-      tokensOutput: { increment: uso.outputTokens },
-      tokensCacheWrite: { increment: uso.cacheWriteTokens },
-      tokensCacheRead: { increment: uso.cacheReadTokens },
     },
   });
 
-  return NextResponse.json({ terminado: true, resultadoTipo });
+  const resultado = await finalizarPartidaAhora(id);
+  return NextResponse.json(resultado);
 }

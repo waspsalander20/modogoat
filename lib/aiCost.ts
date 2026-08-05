@@ -1,9 +1,12 @@
-// Costo real de las llamadas a la IA — para el dashboard de Sapiencia.
+// Costo real de las llamadas a la IA — para el dashboard.
 // Precios de Claude Sonnet 5 (lib/aiMotor.ts MODEL) por millón de tokens.
 // Si se cambia el modelo o Anthropic ajusta precios, actualizar acá — es
 // el único lugar donde vive esto.
-const PRECIO_INPUT_POR_MILLON_USD = 3.0;
-const PRECIO_OUTPUT_POR_MILLON_USD = 15.0;
+// Corregido 1 ago 2026: estaba con el precio estándar ($3/$15), pero hasta
+// el 31 de agosto de 2026 rige el precio de intro de Sonnet 5 ($2/$10) — al
+// pasar esa fecha, revertir a 3.0/15.0.
+const PRECIO_INPUT_POR_MILLON_USD = 2.0;
+const PRECIO_OUTPUT_POR_MILLON_USD = 10.0;
 // Cache de 5 minutos (ephemeral, ver cache_control en aiMotor.ts): escribir
 // cuesta 1.25x el input normal, leer cuesta 0.1x.
 const PRECIO_CACHE_WRITE_POR_MILLON_USD = PRECIO_INPUT_POR_MILLON_USD * 1.25;

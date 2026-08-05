@@ -1,4 +1,7 @@
 const MAX_LARGO_TEXTO_LIBRE = 200;
+// nombre/ciudad no son "un área de interés" — son un dato corto de
+// identidad. Tope aparte, más chico, para que nadie meta un párrafo ahí.
+const MAX_LARGO_DATO_CORTO = 60;
 
 // Límite duro para cualquier texto libre del jugador (área libre, campo
 // libre) antes de que entre al prompt de la IA — evita payloads gigantes
@@ -8,4 +11,14 @@ export function sanitizarTextoLibre(texto: string | null | undefined): string | 
   const limpio = texto?.trim();
   if (!limpio) return null;
   return limpio.slice(0, MAX_LARGO_TEXTO_LIBRE);
+}
+
+// Mismo propósito que sanitizarTextoLibre, para campos cortos de
+// identidad (nombre, ciudad) que también son texto libre del jugador y
+// también entran al prompt de la IA turno a turno — no son menos
+// sensibles solo porque "suenan" a dato inocente.
+export function sanitizarDatoCorto(texto: string | null | undefined): string | null {
+  const limpio = texto?.trim();
+  if (!limpio) return null;
+  return limpio.slice(0, MAX_LARGO_DATO_CORTO);
 }

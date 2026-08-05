@@ -4,6 +4,7 @@ import type { Prisma } from "@/lib/generated/prisma/client";
 import { generarDecisionDeAnio } from "@/lib/aiMotor";
 import { construirEstadoIA } from "@/lib/estadoIA";
 import { calcularResumenAnio } from "@/lib/motor";
+import { normalizarPais } from "@/lib/data/paises";
 import { nombreSkill } from "@/lib/data/skills";
 import { medalla } from "@/lib/data/medallas";
 import type { PerfilId } from "@/lib/types";
@@ -44,6 +45,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
           opcionTexto: d.opcionTexto,
           ingresoAntes: d.ingresoAntes,
           ingresoDespues: d.ingresoDespues,
+          skillsSubidas: d.skillsSubidas as Record<string, number>,
           medallaDesbloqueada: d.medallaDesbloqueada,
           costoOportunidad: d.costoOportunidad,
         })),
@@ -53,6 +55,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
           opcionTexto: e.opcionTexto,
           ingresoAntes: e.ingresoAntes,
           ingresoDespues: e.ingresoDespues,
+          skillsSubidas: e.skillsSubidas as Record<string, number>,
           medallaDesbloqueada: e.medallaDesbloqueada,
           costoOportunidad: e.costoOportunidad,
         })),
@@ -66,7 +69,11 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       partida.skills as Record<string, number>,
       (partida.perfilDominante as PerfilId) ?? "EMP",
       nombreSkill,
-      (id) => medalla(id)?.nombre
+      (id) => {
+        const m = medalla(id);
+        return m ? { nombre: m.nombre, condicion: m.condicion } : undefined;
+      },
+      normalizarPais(partida.jugador.pais)
     );
     return NextResponse.json({ terminado: false, anio: partida.edadActual, turno: null, resumen });
   }

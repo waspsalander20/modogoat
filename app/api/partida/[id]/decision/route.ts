@@ -88,26 +88,46 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const totalTurnosPrevios = partida.decisiones.length + partida.eventos.length;
   const { instruccion: instruccionMentor, forzar: forzarMentor } = construirInstruccionMentor(
     partida.mentorActivo,
-    totalTurnosPrevios
+    totalTurnosPrevios,
+    partida.edadActual - partida.edadInicio
   );
 
+  // procesarEleccion (consecuencia del turno) y generarEvento (el siguiente
+  // turno) no dependen entre sí — ambas parten del mismo estadoIA de antes
+  // de esta elección — así que se disparan en paralelo en vez de en
+  // secuencia. Esto corta a la mitad la latencia percibida por turno sin
+  // tocar el modelo ni el prompt.
+  const eventosEsteAnio = partida.eventos.filter((e) => e.anio === partida.edadActual).length;
+  const debeGenerarEvento = eventosEsteAnio < 2;
+
   let uso: UsoIA = usoVacio();
+  const promesaConsecuencia = procesarEleccion(
+    estadoIA,
+    {
+      titulo: decision.titulo,
+      opcion_elegida: opcion.letra,
+      opcion_texto: opcion.titulo,
+      tiempo_respuesta: body.tiempoRespuesta ?? 0,
+    },
+    instruccionMentor,
+    forzarMentor,
+    (u) => {
+      uso = sumarUso(uso, u);
+    }
+  );
+  const promesaEvento = debeGenerarEvento
+    ? generarEvento(estadoIA, construirInstruccionTipoEvento(partida.eventos), (u) => {
+        uso = sumarUso(uso, u);
+      })
+    : null;
+  // Si promesaConsecuencia falla y salimos antes de llegar al await de
+  // promesaEvento más abajo, esta promesa igual puede rechazar en segundo
+  // plano — sin esto Node la reporta como unhandled rejection.
+  promesaEvento?.catch(() => {});
+
   let consecuencia;
   try {
-    consecuencia = await procesarEleccion(
-      estadoIA,
-      {
-        titulo: decision.titulo,
-        opcion_elegida: opcion.letra,
-        opcion_texto: opcion.titulo,
-        tiempo_respuesta: body.tiempoRespuesta ?? 0,
-      },
-      instruccionMentor,
-      forzarMentor,
-      (u) => {
-        uso = sumarUso(uso, u);
-      }
-    );
+    consecuencia = await promesaConsecuencia;
   } catch (error) {
     console.error("Error procesando decisión con IA:", error);
     return NextResponse.json({ error: "No pudimos continuar tu historia. Intenta de nuevo." }, { status: 502 });
@@ -130,17 +150,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const mentorNuevo = !partida.mentorActivo && consecuencia.mentorActivado ? consecuencia.mentorActivado : null;
   const mentorActivo = partida.mentorActivo ?? mentorNuevo;
 
+  // Tope de 3 apariciones de La Cabrita por partida, enforced acá y no solo
+  // en el prompt (ver regla 7b en aiMotor.ts) — si la IA lo ignora, se
+  // descarta en vez de confiar ciegamente en su propio conteo.
+  const cabritaReflexion = partida.vecesCabrita < 3 ? consecuencia.cabritaReflexion : null;
+  const vecesCabrita = cabritaReflexion ? partida.vecesCabrita + 1 : partida.vecesCabrita;
+
   // Ritmo del año: hasta 2 eventos (imprevisto/oportunidad) por año, tope fijo
   // decidido localmente (no por la IA) para mantener partidas de duración
   // predecible. Siempre se genera uno si queda cupo — el jugador nunca debe
   // quedarse solo leyendo una consecuencia sin una decisión inmediata después.
-  const eventosEsteAnio = partida.eventos.filter((e) => e.anio === partida.edadActual).length;
   let nuevoTurno = null;
-  if (eventosEsteAnio < 2) {
+  if (promesaEvento) {
     try {
-      const evento = await generarEvento(estadoIA, construirInstruccionTipoEvento(partida.eventos), (u) => {
-        uso = sumarUso(uso, u);
-      });
+      const evento = await promesaEvento;
       nuevoTurno = { tipo: "evento" as const, evento };
     } catch (error) {
       console.error("Error generando evento con IA:", error);
@@ -165,6 +188,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         puntosSumados: consecuencia.puntosPerfil,
         medallaDesbloqueada: medallaNueva,
         costoOportunidad: consecuencia.costoOportunidad,
+        cabritaReflexion,
       },
     }),
     prisma.partida.update({
@@ -179,6 +203,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         medallasGanadas,
         alertas,
         mentorActivo,
+        vecesCabrita,
         turnoActual: nuevoTurno ? (nuevoTurno as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
         tokensInput: { increment: uso.inputTokens },
         tokensOutput: { increment: uso.outputTokens },
@@ -191,10 +216,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   return NextResponse.json({
     ok: true,
     narrativa: consecuencia.narrativa,
+    tono: consecuencia.tono,
     ingresoAntes,
     ingresoDespues,
     skillsModificadas: consecuencia.skillsModificadas,
     medallaDesbloqueada: medallaNueva,
     mentorActivado: mentorNuevo,
+    cabritaReflexion,
   });
 }
