@@ -83,7 +83,14 @@ export default function TutorialCabrita({ index, onNext }: { index: number; onNe
       </div>
 
       <div
-        className={`relative -mt-2 w-48 ${beat.mascota === "completa" ? "self-center" : "self-start -ml-6"}`}
+        // "medio"/"cerca" son láminas donde La Cabrita está dibujada hasta el
+        // borde derecho del lienzo (sin margen) — pegarlas al borde IZQUIERDO
+        // de la pantalla deja ese corte recto flotando en medio de la
+        // pantalla, sin ningún borde real que lo justifique, y se ve roto.
+        // Pegadas al borde DERECHO, ese mismo corte coincide con el borde
+        // real de la pantalla y se lee como "sigue fuera de cuadro", no
+        // como un error.
+        className={`relative -mt-2 w-48 ${beat.mascota === "completa" ? "self-center" : "self-end -mr-6"}`}
       >
         <Image
           src={`/cabrita-${beat.mascota}.png`}
