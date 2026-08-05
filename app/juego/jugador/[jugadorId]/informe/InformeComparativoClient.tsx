@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import PantallaCarga from "@/app/juego/PantallaCarga";
+import BotonJugarDeNuevo from "@/app/juego/BotonJugarDeNuevo";
 import { formatoPesos } from "@/lib/format";
 import { medalla } from "@/lib/data/medallas";
 import type { Medalla } from "@/lib/types";
@@ -142,16 +143,15 @@ export default function InformeComparativoClient({ jugadorId }: { jugadorId: str
             preciso es el análisis.
           </p>
           <div className="mt-5 flex flex-col gap-3">
-            <Link
-              href="/juego/onboarding"
-              className="flex items-center justify-center rounded-full py-3 font-black text-white"
+            <BotonJugarDeNuevo
+              className="flex w-full items-center justify-center rounded-full py-3 font-black text-white"
               style={{
                 background: "linear-gradient(180deg, var(--resultado-cta-from) 0%, var(--resultado-cta-to) 87.96%)",
                 border: "1px solid var(--resultado-cta-border)",
               }}
             >
               Recorrer otro camino
-            </Link>
+            </BotonJugarDeNuevo>
             <button
               onClick={analizar}
               className="rounded-full bg-white py-3 font-bold"
@@ -319,8 +319,7 @@ export default function InformeComparativoClient({ jugadorId }: { jugadorId: str
         <Image src="/cabrita-completa.png" alt="La Cabrita" width={1080} height={1920} className="h-auto w-full drop-shadow-xl" />
       </div>
 
-      <Link
-        href="/juego/onboarding"
+      <BotonJugarDeNuevo
         className="flex w-full max-w-[355px] items-center justify-center rounded-full py-3 font-black text-white"
         style={{
           background: "linear-gradient(180deg, var(--resultado-cta-from) 0%, var(--resultado-cta-to) 87.96%)",
@@ -328,7 +327,7 @@ export default function InformeComparativoClient({ jugadorId }: { jugadorId: str
         }}
       >
         Jugar de nuevo
-      </Link>
+      </BotonJugarDeNuevo>
 
       <button
         onClick={descargarPdf}

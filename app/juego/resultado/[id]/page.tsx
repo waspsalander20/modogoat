@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
+import BotonJugarDeNuevo from "@/app/juego/BotonJugarDeNuevo";
 import { prisma } from "@/lib/prisma";
 import { formatoPesos } from "@/lib/format";
 import { normalizarPais } from "@/lib/data/paises";
@@ -267,9 +268,8 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
       </TarjetaResultado>
 
       <div className="relative mt-8 flex w-full max-w-[254px] flex-col gap-3">
-        <Link
-          href="/juego/onboarding"
-          className="flex items-center justify-center gap-2 rounded-full py-3 font-black text-lg text-white"
+        <BotonJugarDeNuevo
+          className="flex w-full items-center justify-center gap-2 rounded-full py-3 font-black text-lg text-white"
           style={{
             background: "linear-gradient(180deg, var(--resultado-cta-from) 0%, var(--resultado-cta-to) 87.96%)",
             border: "1px solid var(--resultado-cta-border)",
@@ -279,7 +279,7 @@ export default async function ResultadoPage({ params }: { params: Promise<{ id: 
         >
           Jugar de nuevo
           <Image src="/icon-left-arrow.png" alt="" width={15} height={15} style={{ transform: "rotate(180deg)" }} />
-        </Link>
+        </BotonJugarDeNuevo>
         <Link
           href={`/juego/jugador/${partida.jugadorId}/informe`}
           className="flex items-center justify-center rounded-full bg-white py-3 font-bold text-lg"
