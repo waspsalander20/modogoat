@@ -162,6 +162,16 @@ body {
   font-family: var(--font-nunito), Arial, Helvetica, sans-serif;
 }
 
+/* En overlays de pantalla completa con scroll (onboarding, decisiones,
+   nuevo mentor), un tap con el mínimo movimiento del dedo puede
+   interpretarse como el inicio de un scroll en vez de un click, y el botón
+   necesita varios intentos para responder — típico de Safari/Chrome
+   móvil. touch-action: manipulation le dice al navegador que el gesto es
+   un tap, no una posible gestión de zoom/scroll, y elimina esa ambigüedad. */
+button {
+  touch-action: manipulation;
+}
+
 .btn-primary {
   background: linear-gradient(135deg, var(--goat-accent-from), var(--goat-accent-to));
   color: var(--goat-accent-ink);

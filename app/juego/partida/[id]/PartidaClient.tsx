@@ -911,10 +911,10 @@ function NuevoMentorScreen({
       className="fixed inset-0 z-50 flex flex-col items-center overflow-hidden"
       style={{ background: "linear-gradient(180deg, #FDBA05 0%, #E45603 100%)" }}
     >
-      <Image src="/loading-fondo.png" alt="" fill priority sizes="100vw" className="object-cover" />
-      <Image src={mentorInfo.imagen} alt="" fill priority sizes="100vw" className="object-cover object-bottom" />
+      <Image src="/loading-fondo.png" alt="" fill priority sizes="100vw" className="pointer-events-none object-cover" />
+      <Image src={mentorInfo.imagen} alt="" fill priority sizes="100vw" className="pointer-events-none object-cover object-bottom" />
       <div
-        className="absolute inset-0"
+        className="pointer-events-none absolute inset-0"
         style={{ background: "linear-gradient(180deg, rgba(136,57,0,0) 32.69%, #782C00 100%)" }}
       />
 
@@ -1066,7 +1066,7 @@ function ResultadoConsecuencia({
 
   return (
     <div ref={contenedorRef} className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto">
-      <Image src={tema.fondo} alt="" fill priority sizes="100vw" className="object-cover" />
+      <Image src={tema.fondo} alt="" fill priority sizes="100vw" className="pointer-events-none object-cover" />
 
       <div
         className="narrativa-bloque relative mt-[63px] w-[354px] max-w-[88%] rounded-[20px] bg-white p-5"
