@@ -31,8 +31,8 @@ export default function LoginForm() {
   return (
     <main className="flex flex-1 flex-col items-center justify-center px-6">
       <form onSubmit={onSubmit} className="card p-6 w-full max-w-sm flex flex-col gap-4">
-        <h1 className="text-xl font-extrabold">Dashboard de Sapiencia</h1>
-        <p className="text-goat-ink-muted text-sm">Acceso solo para el equipo de Sapiencia.</p>
+        <h1 className="text-xl font-extrabold">Dashboard de Modo GOAT</h1>
+        <p className="text-goat-ink-muted text-sm">Acceso solo para el equipo interno.</p>
         <input
           type="password"
           autoFocus
