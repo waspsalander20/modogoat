@@ -53,6 +53,88 @@
   --onboarding-option-selected-from: #9a5a2e;
   --onboarding-option-selected-to: #6e3a17;
   --onboarding-option-selected-border: #4d2a10;
+  /* Mismo tono que --skills-bubble-ink / --resumen-ink — ya se usa este café
+     cálido para texto sobre burbujas blancas en varias pantallas. */
+  --tutorial-bubble-ink: #883900;
+
+  /* Resumen de año — tomado del diseño de Figma "Resumen de año" */
+  --resumen-bg-from: #fdba05;
+  --resumen-bg-to: #e45603;
+  --resumen-card-bg: #f4faff;
+  --resumen-card-border: #983904;
+  --resumen-ink: #883900;
+  --resumen-ink-2: #773200;
+  --resumen-number-from: #fdba05;
+  --resumen-number-to: #ebac00;
+  --resumen-stat-bg-from: #fffce5;
+  --resumen-stat-bg-to: #fff8c2;
+  --resumen-highlight-from: #ffffff;
+  --resumen-highlight-to: #fff6da;
+  --resumen-bad-from: #f50000;
+  --resumen-bad-to: #8f0000;
+  --resumen-cta-from: #7eff38;
+  --resumen-cta-to: #39a300;
+  --resumen-cta-border: #529f05;
+
+  /* Narrativa (resultado de decisión/evento) — tomado del diseño de Figma "Narrativa" */
+  --narrativa-quote-accent: #f8a104;
+  --narrativa-good-bg: #f6ffe4;
+  --narrativa-good-border: #15b515;
+  --narrativa-good-circle: #2fd442;
+  --narrativa-good-text: #15b515;
+  --narrativa-bad-bg: #ffe4e4;
+  --narrativa-bad-border: #f50000;
+  --narrativa-bad-circle: #f50000;
+  --narrativa-bad-text: #f40303;
+
+  /* Skills — tomado del diseño de Figma "Skills" */
+  --skills-card-bg-from: #fff8e4;
+  --skills-card-bg-to: #ffebb7;
+  --skills-card-ink: #222222;
+  --skills-dominadas-from: #15b515;
+  --skills-dominadas-to: #2fd442;
+  --skills-dominadas-border: #62ea72;
+  --skills-desarrollar-from: #fdba05;
+  --skills-desarrollar-to: #e45603;
+  --skills-desarrollar-border: #fdba05;
+  --skills-mejorar-from: #7eff38;
+  --skills-mejorar-to: #39a300;
+  --skills-mejorar-border: #529f05;
+  --skills-entrenar-from: #6a38ff;
+  --skills-entrenar-to: #5c00a3;
+  --skills-entrenar-border: #602fd4;
+  --skills-dot-active: #15b515;
+  --skills-dot-inactive: #ffffff;
+  --skills-bubble-ink: #883900;
+
+  /* Resultado (fin del juego) — tomado del diseño de Figma "Resultado" */
+  --resultado-bg-from: #fdba05;
+  --resultado-bg-to: #e45603;
+  --resultado-card-bg-from: #fff8e4;
+  --resultado-card-bg-to: #ffebb7;
+  --resultado-ink: #161616;
+  --resultado-perfil-icon-from: #fffce5;
+  --resultado-perfil-icon-to: #fff8c2;
+  --resultado-pill-border: #fdba05;
+  --resultado-cta-from: #fdba05;
+  --resultado-cta-to: #e85503;
+  --resultado-cta-border: #e27100;
+  --resultado-secundario-text: #e96d00;
+
+  /* Splash ("Homepage") — valores exactos extraídos de Figma vía Copy as code */
+  --splash-pill-bg: rgba(0, 0, 0, 0.51);
+  --splash-pill-border: rgba(255, 255, 255, 0.14);
+  --splash-circle-clock: #602fd4;
+  --splash-circle-infinity: #15b515;
+  --splash-star-fill: #e3db00;
+  --splash-btn-glow-from: #fdba05;
+  --splash-btn-glow-to: #e45603;
+  --splash-btn-glow-border: rgba(53, 22, 0, 0.49);
+  --splash-btn-from: #fdba05;
+  --splash-btn-to: #e85503;
+  --splash-btn-border: #e27100;
+  --splash-title-grad-from: #feda3c;
+  --splash-title-grad-to: #efa300;
 }
 
 @theme inline {
@@ -182,6 +264,36 @@ body {
 }
 .prose-narrativa strong {
   color: var(--goat-ink);
+}
+
+.tarjeta-narrativa p {
+  margin: 0;
+}
+.tarjeta-narrativa p + p {
+  margin-top: 0.5rem;
+}
+.tarjeta-narrativa strong {
+  color: inherit;
+}
+
+.narrativa-bloque p {
+  margin: 0;
+  font-weight: 800;
+  font-size: 18px;
+  line-height: 102%;
+  color: #000000;
+  text-shadow: 0px 2px 5px rgba(0, 0, 0, 0.05);
+}
+.narrativa-bloque blockquote {
+  margin: 0;
+  border-left: 4px solid var(--narrativa-quote-accent);
+  border-radius: 2px;
+  padding-left: 14px;
+}
+.narrativa-bloque blockquote p {
+  font-weight: 500;
+  font-size: 15px;
+  font-style: italic;
 }
 
 .onboarding-bg {
