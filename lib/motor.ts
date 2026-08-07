@@ -9,7 +9,7 @@ import { formatoPesosCompacto } from "@/lib/format";
 // Header.tsx, resultado/page.tsx y estadoIA.ts importan este valor en vez
 // de duplicarlo, para que cambiarlo (ej. para acortar un demo) sea un
 // cambio de una sola línea.
-export const DURACION_ANIOS = 5;
+export const DURACION_ANIOS = 7;
 
 // Recalibrado 1 ago 2026 (investigación con fuentes reales, ver auditoría).
 // La dirección (gasto SUBE con la edad) se mantiene — no está invertida: un

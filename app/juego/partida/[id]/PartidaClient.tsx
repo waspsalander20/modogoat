@@ -454,31 +454,6 @@ function ResumenAnioView({
                 </p>
               </div>
             )}
-
-            {resumen.mejorMovimiento && (
-              <div
-                className="mt-4 flex w-full flex-col gap-1.5 rounded-[20px] px-4 py-4"
-                style={{
-                  background: "linear-gradient(132.49deg, var(--resumen-bg-from) 26.1%, var(--resumen-bg-to) 86.54%)",
-                  boxShadow: "inset 0px 4px 4px rgba(255,255,255,0.25)",
-                }}
-              >
-                <div className="flex items-center gap-2.5">
-                  <span
-                    className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full"
-                    style={{ background: "#ffba00", boxShadow: "0px 4px 4px rgba(0,0,0,0.25), inset 0px 4px 4px rgba(255,255,255,0.25)" }}
-                  >
-                    <Image src="/icon-idea.png" alt="" width={18} height={18} />
-                  </span>
-                  <span className="font-extrabold text-sm uppercase tracking-wide text-white">
-                    Si haces una sola cosa el año {anio + 1}
-                  </span>
-                </div>
-                <p className="text-sm font-semibold text-white" style={{ textShadow: "0px 2px 5px rgba(0,0,0,0.05)" }}>
-                  {resumen.mejorMovimiento}
-                </p>
-              </div>
-            )}
           </>
         )}
 
