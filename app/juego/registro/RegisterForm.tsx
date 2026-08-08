@@ -83,13 +83,16 @@ export default function RegisterForm() {
               placeholder="Correo electrónico"
               className="onboarding-input"
             />
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Crea una contraseña"
-              className="onboarding-input"
-            />
+            <div>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Crea una contraseña"
+                className="onboarding-input"
+              />
+              <p className="onboarding-label mt-1.5 text-xs">Mínimo 8 caracteres</p>
+            </div>
             <input
               type="password"
               value={repitePassword}
