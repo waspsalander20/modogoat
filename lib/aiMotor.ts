@@ -315,7 +315,13 @@ async function llamarHerramienta<T>(
     model: MODEL,
     max_tokens: maxTokens,
     system: [
-      { type: "text", text: construirSystemPrompt(estado.pais ?? PAIS_DEFECTO), cache_control: { type: "ephemeral" } },
+      // El TTL de 1h (en vez del default de 5min) importa mucho acá: el
+      // system prompt son ~9,000 tokens de reglas narrativas, y el jugador
+      // fácilmente tarda más de 5 minutos leyendo/decidiendo entre turnos —
+      // con el default, casi cada llamada terminaba pagando el costo
+      // completo de reprocesar el prompt (el driver real de la latencia
+      // percibida), no solo el de caché.
+      { type: "text", text: construirSystemPrompt(estado.pais ?? PAIS_DEFECTO), cache_control: { type: "ephemeral", ttl: "1h" } },
     ],
     tools: [
       {
@@ -717,7 +723,7 @@ export async function generarAnalisisComparativo(
   const response = await anthropic.messages.create({
     model: MODEL,
     max_tokens: 1536,
-    system: [{ type: "text", text: construirSystemPromptAnalisisComparativo(pais), cache_control: { type: "ephemeral" } }],
+    system: [{ type: "text", text: construirSystemPromptAnalisisComparativo(pais), cache_control: { type: "ephemeral", ttl: "1h" } }],
     tools: [
       {
         name: "presentar_analisis_comparativo",
