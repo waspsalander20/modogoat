@@ -9,6 +9,13 @@ const anthropic = new Anthropic();
 // Sonnet 5, no Opus — el usuario priorizó velocidad de respuesta sobre
 // profundidad narrativa (cada turno bloquea la UI hasta que la IA responde).
 const MODEL = "claude-sonnet-5";
+// Para el título+4 opciones de una decisión o evento (texto corto y
+// estructurado, sin necesidad de la prosa cinematográfica de una
+// consecuencia) Haiku responde notablemente más rápido que Sonnet sin
+// sacrificar calidad perceptible — se usa solo ahí. La narrativa de
+// consecuencia, la reflexión final y el análisis final se quedan en Sonnet,
+// donde sí importa la calidad de la escritura.
+const MODEL_RAPIDO = "claude-haiku-4-5-20251001";
 
 // Sistema condensado a partir de ModoGOAT_Prompt_Motor.md — se mantienen las
 // reglas narrativas, los 5 perfiles y las reglas de detección invisible tal
@@ -303,7 +310,8 @@ async function llamarHerramienta<T>(
   toolSchema: object,
   extra?: { decision_tomada?: unknown; instruccion_adicional?: string },
   maxTokens = 1024,
-  registrarUso?: (uso: UsoIA) => void
+  registrarUso?: (uso: UsoIA) => void,
+  model: string = MODEL
 ): Promise<T> {
   const userContent = JSON.stringify({
     accion,
@@ -312,7 +320,7 @@ async function llamarHerramienta<T>(
   });
 
   const response = await anthropic.messages.create({
-    model: MODEL,
+    model,
     max_tokens: maxTokens,
     system: [
       // El TTL de 1h (en vez del default de 5min) importa mucho acá: el
@@ -413,7 +421,7 @@ export async function generarDecisionDeAnio(
     tiene_campo_libre: boolean;
     texto_campo_libre?: string;
     opciones: OpcionGenerada[];
-  }>("generar_inicio_anio", estado, "presentar_decision", DECISION_SCHEMA, { instruccion_adicional }, 1024, registrarUso);
+  }>("generar_inicio_anio", estado, "presentar_decision", DECISION_SCHEMA, { instruccion_adicional }, 1024, registrarUso, MODEL_RAPIDO);
   validarOpciones(raw.opciones);
 
   return {
@@ -437,7 +445,8 @@ export async function generarEvento(
     EVENTO_SCHEMA,
     { instruccion_adicional: instruccionAdicional },
     1024,
-    registrarUso
+    registrarUso,
+    MODEL_RAPIDO
   );
   validarOpciones(evento.opciones);
   return { ...evento, opciones: mezclarOpciones(evento.opciones) };
