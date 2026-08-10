@@ -26,6 +26,8 @@ interface TurnoResponse {
   error?: string;
 }
 
+type ResultadoPrecarga = { redirigir: true } | { redirigir: false; fase: Fase };
+
 type Fase =
   | { tipo: "cargando" }
   | { tipo: "decision"; decision: DecisionGenerada; opcionSeleccionada: string | null; inicio: number }
@@ -52,30 +54,72 @@ export default function PartidaClient({ partidaId }: { partidaId: string }) {
   const { datos, refrescar } = usePartidaHeader();
   const [fase, setFase] = useState<Fase>({ tipo: "cargando" });
 
-  const cargarTurno = useCallback(async () => {
-    setFase({ tipo: "cargando" });
-    const res = await fetch(`/api/partida/${partidaId}/turno`);
+  // Interpreta la respuesta de GET /turno sin aplicarla todavía — la
+  // comparten cargarTurno (que la aplica al toque) y la precarga en
+  // segundo plano del resumen de año (que la deja lista para cuando el
+  // jugador haga clic, ver precargarSiguiente más abajo).
+  async function interpretarTurno(res: Response): Promise<ResultadoPrecarga> {
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      setFase({ tipo: "error", mensaje: data.error ?? "No pudimos cargar tu partida." });
-      return;
+      return { redirigir: false, fase: { tipo: "error", mensaje: data.error ?? "No pudimos cargar tu partida." } };
     }
     const data: TurnoResponse = await res.json();
-    if (data.terminado) {
+    if (data.terminado) return { redirigir: true };
+    if (data.turno?.tipo === "decision") {
+      return { redirigir: false, fase: { tipo: "decision", decision: data.turno.decision, opcionSeleccionada: null, inicio: Date.now() } };
+    }
+    if (data.turno?.tipo === "evento") {
+      return { redirigir: false, fase: { tipo: "evento", evento: data.turno.evento, opcionSeleccionada: null, inicio: Date.now() } };
+    }
+    if (data.turno?.tipo === "reflexion_final") {
+      return { redirigir: false, fase: { tipo: "reflexion_final", reflexion: data.turno.reflexion } };
+    }
+    return { redirigir: false, fase: { tipo: "resumen_anio", anio: data.anio ?? 0, resumen: data.resumen ?? null } };
+  }
+
+  const cargarTurno = useCallback(async () => {
+    setFase({ tipo: "cargando" });
+    const resultado = await interpretarTurno(await fetch(`/api/partida/${partidaId}/turno`));
+    if (resultado.redirigir) {
       router.push(`/juego/resultado/${partidaId}`);
       return;
     }
-
-    if (data.turno?.tipo === "decision") {
-      setFase({ tipo: "decision", decision: data.turno.decision, opcionSeleccionada: null, inicio: Date.now() });
-    } else if (data.turno?.tipo === "evento") {
-      setFase({ tipo: "evento", evento: data.turno.evento, opcionSeleccionada: null, inicio: Date.now() });
-    } else if (data.turno?.tipo === "reflexion_final") {
-      setFase({ tipo: "reflexion_final", reflexion: data.turno.reflexion });
-    } else {
-      setFase({ tipo: "resumen_anio", anio: data.anio ?? 0, resumen: data.resumen ?? null });
-    }
+    setFase(resultado.fase);
   }, [partidaId, router]);
+
+  // Arranca fin-anio + la siguiente pregunta en segundo plano apenas se
+  // muestra el resumen de año — la generación con IA (la parte lenta) tiene
+  // así todo el tiempo que el alumno se tarde leyendo el resumen para
+  // terminar, en vez de arrancar recién cuando hace clic en "Arrancar el
+  // año X" (que es la espera que se sentía lenta y hacía perder interés).
+  // Se cachea por año para no duplicar la llamada si el efecto se dispara
+  // dos veces (ej. StrictMode) o si el jugador ya hizo clic.
+  const precargaRef = useRef<{ anio: number; promise: Promise<ResultadoPrecarga> } | null>(null);
+  function precargarSiguiente(anio: number): Promise<ResultadoPrecarga> {
+    if (precargaRef.current?.anio === anio) return precargaRef.current.promise;
+    const promise = (async (): Promise<ResultadoPrecarga> => {
+      const resFin = await fetch(`/api/partida/${partidaId}/fin-anio`, { method: "POST" });
+      if (!resFin.ok) {
+        return { redirigir: false, fase: { tipo: "error", mensaje: "No pudimos avanzar de año." } };
+      }
+      const dataFin = await resFin.json();
+      if (dataFin.terminado) return { redirigir: true };
+      return interpretarTurno(await fetch(`/api/partida/${partidaId}/turno`));
+    })();
+    precargaRef.current = { anio, promise };
+    return promise;
+  }
+
+  async function continuarDesdeResumen(anio: number) {
+    setFase({ tipo: "cargando" });
+    const resultado = await precargarSiguiente(anio);
+    refrescar();
+    if (resultado.redirigir) {
+      router.push(`/juego/resultado/${partidaId}`);
+      return;
+    }
+    setFase(resultado.fase);
+  }
 
   async function confirmarReflexionFinal(respuestaFeliz: boolean) {
     setFase({ tipo: "cargando" });
@@ -176,21 +220,14 @@ export default function PartidaClient({ partidaId }: { partidaId: string }) {
     });
   }
 
-  async function finalizarAnio() {
-    setFase({ tipo: "cargando" });
-    const res = await fetch(`/api/partida/${partidaId}/fin-anio`, { method: "POST" });
-    if (!res.ok) {
-      setFase({ tipo: "error", mensaje: "No pudimos avanzar de año." });
-      return;
+  // Dispara la precarga en segundo plano apenas se entra al resumen de año
+  // (ver precargarSiguiente) — no espera al clic del jugador.
+  useEffect(() => {
+    if (fase.tipo === "resumen_anio") {
+      precargarSiguiente(fase.anio);
     }
-    const data = await res.json();
-    refrescar();
-    if (data.terminado) {
-      router.push(`/juego/resultado/${partidaId}`);
-      return;
-    }
-    cargarTurno();
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fase]);
 
   return (
     <main className="flex flex-1 flex-col">
@@ -259,7 +296,7 @@ export default function PartidaClient({ partidaId }: { partidaId: string }) {
           resumen={fase.resumen}
           nombre={datos?.nombre}
           pais={normalizarPais(datos?.pais)}
-          onContinuar={finalizarAnio}
+          onContinuar={() => continuarDesdeResumen(fase.anio)}
         />
       )}
 
