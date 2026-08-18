@@ -111,6 +111,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       resultadoTipo: p.resultadoTipo,
       ingresoFinal: p.ingresoFinal,
       medallasGanadas: p.medallasGanadas,
+      // El resumen detallado de este camino (mismo texto que ya se generó y
+      // guardó al terminar esa partida individual, ver lib/finalizacion.ts)
+      // — no se vuelve a llamar a la IA acá, solo se reusa.
+      analisisFinal: terminadas.find((t) => t.id === p.id)?.analisisFinal ?? null,
     })),
     patrones,
     areasDeMejora,

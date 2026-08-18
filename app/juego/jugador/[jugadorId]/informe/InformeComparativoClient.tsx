@@ -28,6 +28,7 @@ interface PartidaResumen {
   resultadoTipo: string | null;
   ingresoFinal: number | null;
   medallasGanadas: string[];
+  analisisFinal: string | null;
 }
 
 interface MejorDecision {
@@ -276,6 +277,19 @@ export default function InformeComparativoClient({ jugadorId }: { jugadorId: str
             </ul>
           </Tarjeta>
         )}
+
+      {datos.partidas.map((p, i) =>
+        p.analisisFinal ? (
+          <Tarjeta
+            key={p.id}
+            titulo={`Camino ${i + 1} en detalle — ${p.perfilDominante ? NOMBRES_PERFIL[p.perfilDominante as PerfilId] : "Sin perfil"}`}
+          >
+            <div className="prose-narrativa text-sm leading-relaxed" style={{ color: "var(--resultado-ink)" }}>
+              <ReactMarkdown>{p.analisisFinal}</ReactMarkdown>
+            </div>
+          </Tarjeta>
+        ) : null
+      )}
 
       <Tarjeta titulo="En qué se diferenciaron">
         <div className="prose-narrativa text-sm leading-relaxed" style={{ color: "var(--resultado-ink)" }}>

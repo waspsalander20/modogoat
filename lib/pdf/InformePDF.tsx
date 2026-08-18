@@ -7,6 +7,7 @@ import { nombreSkill } from "@/lib/data/skills";
 import { NOMBRES_PERFIL } from "@/lib/data/perfiles";
 import { NOMBRES_ALERTA } from "@/lib/data/alertas";
 import type { PaisId } from "@/lib/data/paises";
+import { DURACION_ANIOS } from "@/lib/motor";
 
 const FONT_DIR = path.join(process.cwd(), "lib/pdf/fonts");
 const PUBLIC_DIR = path.join(process.cwd(), "public");
@@ -225,6 +226,7 @@ export interface PartidaResumenPDF {
   resultadoTipo: string | null;
   ingresoFinal: number | null;
   medallasGanadas: string[];
+  analisisFinal: string | null;
 }
 
 export interface InformePDFProps {
@@ -255,9 +257,11 @@ export function InformePDF({
     .filter((m): m is Medalla => !!m)
     .sort((a, b) => NIVEL_ORDEN[b.nivel] - NIVEL_ORDEN[a.nivel]);
 
-  const anioMin = Math.min(...mejoresDecisiones.map((d) => d.anio), Infinity);
-  const anioMax = Math.max(...mejoresDecisiones.map((d) => d.anio), -Infinity);
-  const rangoAnios = Number.isFinite(anioMin) && Number.isFinite(anioMax) && anioMax >= anioMin ? anioMax - anioMin + 1 : partidas.length;
+  // Cada partida dura DURACION_ANIOS años por diseño (mismo valor para
+  // todas, no varía por camino) — usar el rango de mejoresDecisiones acá
+  // era incorrecto: esa lista trae solo la MEJOR decisión de cada camino,
+  // no todo el rango real jugado.
+  const rangoAnios = DURACION_ANIOS;
 
   const mostrarPatrones =
     partidas.length >= 2 &&
@@ -326,6 +330,25 @@ export function InformePDF({
         </View>
         <Footer />
       </Page>
+
+      {partidas.some((p) => p.analisisFinal) && (
+        <Page size="A4" style={styles.page}>
+          <Letterhead nombre={nombre} />
+          <View style={styles.body}>
+            {partidas.map((p, i) =>
+              p.analisisFinal ? (
+                <Tarjeta
+                  key={p.id}
+                  titulo={`Camino ${i + 1} en detalle — ${limpiarTexto(p.perfilDominante ? NOMBRES_PERFIL[p.perfilDominante as PerfilId] : "Sin perfil")}`}
+                >
+                  <Prosa texto={p.analisisFinal} />
+                </Tarjeta>
+              ) : null
+            )}
+          </View>
+          <Footer />
+        </Page>
+      )}
 
       <Page size="A4" style={styles.page}>
         <Letterhead nombre={nombre} />
