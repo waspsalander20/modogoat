@@ -229,6 +229,32 @@ export default function PartidaClient({ partidaId }: { partidaId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fase]);
 
+  // Precalcula la consecuencia de las 4 opciones apenas se muestra una
+  // decisión o evento — mientras el jugador todavía está leyendo/pensando,
+  // no cuando ya eligió. Corre server-side (ver /decision/simular,
+  // /evento/simular y lib/turnoCache.ts): el cliente solo dispara los 4
+  // pedidos y sigue de largo, nunca ve ni necesita el resultado. La
+  // decisión inicial (con campo libre) no tiene consecuencia fija por
+  // opción — no hay nada que precalcular ahí.
+  const precalculadoRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (fase.tipo !== "decision" && fase.tipo !== "evento") return;
+    if (fase.tipo === "decision" && fase.decision.tieneCampoLibre) return;
+    const titulo = fase.tipo === "decision" ? fase.decision.titulo : fase.evento.nombre;
+    if (precalculadoRef.current === titulo) return;
+    precalculadoRef.current = titulo;
+    const ruta = fase.tipo === "decision" ? "decision" : "evento";
+    const opciones = fase.tipo === "decision" ? fase.decision.opciones : fase.evento.opciones;
+    for (const opcion of opciones) {
+      fetch(`/api/partida/${partidaId}/${ruta}/simular`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ opcionLetra: opcion.letra }),
+      }).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fase]);
+
   return (
     <main className="flex flex-1 flex-col">
       {fase.tipo === "cargando" && <PantallaCarga />}

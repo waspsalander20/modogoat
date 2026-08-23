@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/lib/generated/prisma/client";
-import { procesarEleccion, generarEvento, type EventoGenerado } from "@/lib/aiMotor";
-import { construirEstadoIA, construirInstruccionMentor, construirInstruccionTipoEvento } from "@/lib/estadoIA";
+import type { EventoGenerado } from "@/lib/aiMotor";
 import { aplicarSkills, sumarPuntos, calcularPerfil } from "@/lib/motor";
 import type { Puntos } from "@/lib/types";
-import { usoVacio, sumarUso, type UsoIA } from "@/lib/aiCost";
+import { generarConsecuenciaEvento, type ResultadoGeneracionTurno } from "@/lib/turnoGeneracion";
+import { clavePrecalculo, tomarPrecalculo } from "@/lib/turnoCache";
 
 interface Body {
   opcionLetra: "A" | "B" | "C" | "D";
@@ -39,60 +39,24 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Opción inválida" }, { status: 400 });
   }
 
-  const historial = [
-    ...partida.decisiones.map((d) => ({ anio: d.anio, titulo: d.titulo, opcionElegida: d.opcionElegida, opcionTexto: d.opcionTexto })),
-    ...partida.eventos.map((e) => ({ anio: e.anio, titulo: e.nombre, opcionElegida: e.opcionElegida, opcionTexto: e.opcionTexto })),
-  ].sort((a, b) => a.anio - b.anio);
-  const estadoIA = construirEstadoIA(partida, historial, evento.nombre);
+  // Mismo precálculo en segundo plano que decision/route.ts — ver
+  // evento/simular/route.ts y lib/turnoCache.ts.
+  const clave = clavePrecalculo(id, evento.nombre, opcion.letra);
+  const precalculo = tomarPrecalculo<ResultadoGeneracionTurno>(clave);
 
-  const totalTurnosPrevios = partida.decisiones.length + partida.eventos.length;
-  const { instruccion: instruccionMentor, forzar: forzarMentor } = construirInstruccionMentor(
-    partida.mentorActivo,
-    totalTurnosPrevios,
-    partida.edadActual - partida.edadInicio
-  );
-
-  // procesarEleccion (consecuencia del turno) y generarEvento (el siguiente
-  // turno) no dependen entre sí — ambas parten del mismo estadoIA de antes
-  // de esta elección — así que se disparan en paralelo en vez de en
-  // secuencia. Esto corta a la mitad la latencia percibida por turno sin
-  // tocar el modelo ni el prompt.
-  const eventosEsteAnio = partida.eventos.filter((e) => e.anio === partida.edadActual).length + 1;
-  const debeGenerarEvento = eventosEsteAnio < 2;
-  const tiposConEsteEvento = [...partida.eventos, { tipoEvento: evento.tipo }];
-
-  let uso: UsoIA = usoVacio();
-  const promesaConsecuencia = procesarEleccion(
-    estadoIA,
-    {
-      titulo: evento.nombre,
-      opcion_elegida: opcion.letra,
-      opcion_texto: opcion.texto,
-      tiempo_respuesta: body.tiempoRespuesta ?? 0,
-    },
-    instruccionMentor,
-    forzarMentor,
-    (u) => {
-      uso = sumarUso(uso, u);
-    }
-  );
-  const promesaEvento = debeGenerarEvento
-    ? generarEvento(estadoIA, construirInstruccionTipoEvento(tiposConEsteEvento), (u) => {
-        uso = sumarUso(uso, u);
-      })
-    : null;
-  // Si promesaConsecuencia falla y salimos antes de llegar al await de
-  // promesaEvento más abajo, esta promesa igual puede rechazar en segundo
-  // plano — sin esto Node la reporta como unhandled rejection.
-  promesaEvento?.catch(() => {});
-
-  let consecuencia;
+  let resultado: ResultadoGeneracionTurno;
   try {
-    consecuencia = await promesaConsecuencia;
+    resultado = precalculo
+      ? await precalculo
+      : await generarConsecuenciaEvento(partida, evento, opcion.letra, opcion.texto, body.tiempoRespuesta ?? 0);
   } catch (error) {
     console.error("Error procesando evento con IA:", error);
     return NextResponse.json({ error: "No pudimos continuar tu historia. Intenta de nuevo." }, { status: 502 });
   }
+  const { consecuencia, siguienteEvento, uso } = resultado;
+  // Si vino del precálculo, evento/simular/route.ts ya sumó su costo real
+  // apenas terminó de generarse — sumarlo de nuevo acá lo duplicaría.
+  const usoParaSumar = precalculo ? { inputTokens: 0, outputTokens: 0, cacheWriteTokens: 0, cacheReadTokens: 0 } : uso;
 
   const ingresoAntes = partida.ingresoActual;
   const ingresoDespues = consecuencia.ingresoNuevo;
@@ -119,15 +83,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   // Mismo tope de 2 eventos/año que decision/route.ts — siempre se intenta
   // uno si queda cupo, para que el jugador nunca quede solo leyendo texto
   // sin una decisión inmediata después.
-  let nuevoTurno = null;
-  if (promesaEvento) {
-    try {
-      const siguienteEvento = await promesaEvento;
-      nuevoTurno = { tipo: "evento" as const, evento: siguienteEvento };
-    } catch (error) {
-      console.error("Error generando siguiente evento con IA:", error);
-    }
-  }
+  const nuevoTurno = siguienteEvento ? { tipo: "evento" as const, evento: siguienteEvento } : null;
 
   await prisma.$transaction([
     prisma.eventoJugado.create({
@@ -163,10 +119,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         mentorActivo,
         vecesCabrita,
         turnoActual: nuevoTurno ? (nuevoTurno as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
-        tokensInput: { increment: uso.inputTokens },
-        tokensOutput: { increment: uso.outputTokens },
-        tokensCacheWrite: { increment: uso.cacheWriteTokens },
-        tokensCacheRead: { increment: uso.cacheReadTokens },
+        tokensInput: { increment: usoParaSumar.inputTokens },
+        tokensOutput: { increment: usoParaSumar.outputTokens },
+        tokensCacheWrite: { increment: usoParaSumar.cacheWriteTokens },
+        tokensCacheRead: { increment: usoParaSumar.cacheReadTokens },
       },
     }),
   ]);

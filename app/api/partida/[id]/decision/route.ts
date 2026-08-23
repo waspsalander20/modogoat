@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/lib/generated/prisma/client";
-import { procesarEleccion, generarEvento, generarDecisionDeAnio, type DecisionGenerada } from "@/lib/aiMotor";
-import { construirEstadoIA, construirInstruccionMentor, construirInstruccionTipoEvento } from "@/lib/estadoIA";
+import { generarDecisionDeAnio, type DecisionGenerada } from "@/lib/aiMotor";
+import { construirEstadoIA } from "@/lib/estadoIA";
 import { sanitizarTextoLibre } from "@/lib/sanitizarTexto";
 import { aplicarSkills, sumarPuntos, calcularPerfil } from "@/lib/motor";
 import type { Puntos } from "@/lib/types";
 import { usoVacio, sumarUso, type UsoIA } from "@/lib/aiCost";
+import { generarConsecuenciaDecision, type ResultadoGeneracionTurno } from "@/lib/turnoGeneracion";
+import { clavePrecalculo, tomarPrecalculo } from "@/lib/turnoCache";
 
 interface Body {
   opcionLetra: "A" | "B" | "C" | "D";
@@ -83,55 +85,26 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ ok: true, turno: nuevoTurnoInicial });
   }
 
-  const estadoIA = construirEstadoIA(partida, historial, null);
+  // Mientras el jugador leía las 4 opciones, ya se venía precalculando la
+  // consecuencia de esta letra en segundo plano (ver decision/simular/route.ts
+  // y lib/turnoCache.ts) — si ya está (o casi) lista, se reusa acá en vez de
+  // volver a llamar a la IA; si no, se genera fresco como siempre.
+  const clave = clavePrecalculo(id, decision.titulo, opcion.letra);
+  const precalculo = tomarPrecalculo<ResultadoGeneracionTurno>(clave);
 
-  const totalTurnosPrevios = partida.decisiones.length + partida.eventos.length;
-  const { instruccion: instruccionMentor, forzar: forzarMentor } = construirInstruccionMentor(
-    partida.mentorActivo,
-    totalTurnosPrevios,
-    partida.edadActual - partida.edadInicio
-  );
-
-  // procesarEleccion (consecuencia del turno) y generarEvento (el siguiente
-  // turno) no dependen entre sí — ambas parten del mismo estadoIA de antes
-  // de esta elección — así que se disparan en paralelo en vez de en
-  // secuencia. Esto corta a la mitad la latencia percibida por turno sin
-  // tocar el modelo ni el prompt.
-  const eventosEsteAnio = partida.eventos.filter((e) => e.anio === partida.edadActual).length;
-  const debeGenerarEvento = eventosEsteAnio < 2;
-
-  let uso: UsoIA = usoVacio();
-  const promesaConsecuencia = procesarEleccion(
-    estadoIA,
-    {
-      titulo: decision.titulo,
-      opcion_elegida: opcion.letra,
-      opcion_texto: opcion.titulo,
-      tiempo_respuesta: body.tiempoRespuesta ?? 0,
-    },
-    instruccionMentor,
-    forzarMentor,
-    (u) => {
-      uso = sumarUso(uso, u);
-    }
-  );
-  const promesaEvento = debeGenerarEvento
-    ? generarEvento(estadoIA, construirInstruccionTipoEvento(partida.eventos), (u) => {
-        uso = sumarUso(uso, u);
-      })
-    : null;
-  // Si promesaConsecuencia falla y salimos antes de llegar al await de
-  // promesaEvento más abajo, esta promesa igual puede rechazar en segundo
-  // plano — sin esto Node la reporta como unhandled rejection.
-  promesaEvento?.catch(() => {});
-
-  let consecuencia;
+  let resultado: ResultadoGeneracionTurno;
   try {
-    consecuencia = await promesaConsecuencia;
+    resultado = precalculo
+      ? await precalculo
+      : await generarConsecuenciaDecision(partida, decision, opcion.letra, opcion.titulo, body.tiempoRespuesta ?? 0);
   } catch (error) {
     console.error("Error procesando decisión con IA:", error);
     return NextResponse.json({ error: "No pudimos continuar tu historia. Intenta de nuevo." }, { status: 502 });
   }
+  const { consecuencia, siguienteEvento, uso } = resultado;
+  // Si vino del precálculo, decision/simular/route.ts ya sumó su costo real
+  // apenas terminó de generarse — sumarlo de nuevo acá lo duplicaría.
+  const usoParaSumar = precalculo ? { inputTokens: 0, outputTokens: 0, cacheWriteTokens: 0, cacheReadTokens: 0 } : uso;
 
   const ingresoAntes = partida.ingresoActual;
   const ingresoDespues = consecuencia.ingresoNuevo;
@@ -160,16 +133,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   // decidido localmente (no por la IA) para mantener partidas de duración
   // predecible. Siempre se genera uno si queda cupo — el jugador nunca debe
   // quedarse solo leyendo una consecuencia sin una decisión inmediata después.
-  let nuevoTurno = null;
-  if (promesaEvento) {
-    try {
-      const evento = await promesaEvento;
-      nuevoTurno = { tipo: "evento" as const, evento };
-    } catch (error) {
-      console.error("Error generando evento con IA:", error);
-      // seguimos sin evento este año en vez de romper la partida
-    }
-  }
+  const nuevoTurno = siguienteEvento ? { tipo: "evento" as const, evento: siguienteEvento } : null;
 
   await prisma.$transaction([
     prisma.decisionJugada.create({
@@ -205,10 +169,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         mentorActivo,
         vecesCabrita,
         turnoActual: nuevoTurno ? (nuevoTurno as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
-        tokensInput: { increment: uso.inputTokens },
-        tokensOutput: { increment: uso.outputTokens },
-        tokensCacheWrite: { increment: uso.cacheWriteTokens },
-        tokensCacheRead: { increment: uso.cacheReadTokens },
+        tokensInput: { increment: usoParaSumar.inputTokens },
+        tokensOutput: { increment: usoParaSumar.outputTokens },
+        tokensCacheWrite: { increment: usoParaSumar.cacheWriteTokens },
+        tokensCacheRead: { increment: usoParaSumar.cacheReadTokens },
       },
     }),
   ]);
