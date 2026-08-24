@@ -29,6 +29,14 @@ export function clavePrecalculo(partidaId: string, tituloTurno: string, letra: s
   return `${partidaId}:${tituloTurno}:${letra}`;
 }
 
+// El "próximo evento" no depende de la letra elegida (ver el comentario en
+// lib/turnoGeneracion.ts) — clave sin letra a propósito, para que las 4
+// llamadas de precálculo (una por opción) compartan el mismo cálculo en vez
+// de dispararlo 4 veces.
+export function claveSiguienteEvento(partidaId: string, tituloTurno: string): string {
+  return `${partidaId}:${tituloTurno}:siguiente-evento`;
+}
+
 // Si ya hay un cálculo en curso o resuelto para esta clave, lo reusa
 // (dedupe) — si no, arranca uno nuevo con `generar` y lo cachea de una vez
 // (antes de esperarlo), para que llamadas concurrentes no disparen la IA

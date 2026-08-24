@@ -7,8 +7,12 @@ type PartidaConHistorial = Prisma.PartidaGetPayload<{
   include: { jugador: true; decisiones: true; eventos: true };
 }>;
 
-export interface ResultadoGeneracionTurno {
+export interface ResultadoConsecuencia {
   consecuencia: ConsecuenciaGenerada;
+  uso: UsoIA;
+}
+
+export interface ResultadoSiguienteEvento {
   siguienteEvento: EventoGenerado | null;
   uso: UsoIA;
 }
@@ -20,22 +24,23 @@ function construirHistorial(partida: PartidaConHistorial) {
   ].sort((a, b) => a.anio - b.anio);
 }
 
-// Genera la consecuencia de una decisión (+ el siguiente evento si queda
-// cupo este año, en paralelo — ver comentario original en decision/route.ts)
-// sin tocar la base de datos. La usan tanto decision/route.ts (al confirmar
-// la elección real) como decision/simular/route.ts (precálculo mientras el
-// jugador todavía está leyendo, ver lib/turnoCache.ts) — la misma función
-// para las dos, así nunca pueden desincronizarse.
-export function generarConsecuenciaDecision(
+// El "próximo evento" (imprevisto/oportunidad) NO depende de cuál de las 4
+// opciones elija el jugador — usa el mismo estadoIA de ANTES de la elección
+// (ver construirEstadoIA acá abajo, nunca recibe decisionTomada). Por eso
+// vive separado de generarSoloConsecuencia*: se precalcula UNA sola vez por
+// turno (cacheado sin la letra en la clave, ver decision/simular/route.ts),
+// no 4 veces como la consecuencia — generarlo 4 veces sería tirar plata real
+// sin ninguna razón, las 4 corridas parten de exactamente el mismo estado.
+
+export function generarSoloConsecuenciaDecision(
   partida: PartidaConHistorial,
   decision: DecisionGenerada,
   opcionLetra: string,
   opcionTitulo: string,
   tiempoRespuesta: number
-): Promise<ResultadoGeneracionTurno> {
+): Promise<ResultadoConsecuencia> {
   const historial = construirHistorial(partida);
   const estadoIA = construirEstadoIA(partida, historial, null);
-
   const totalTurnosPrevios = partida.decisiones.length + partida.eventos.length;
   const { instruccion: instruccionMentor, forzar: forzarMentor } = construirInstruccionMentor(
     partida.mentorActivo,
@@ -43,11 +48,8 @@ export function generarConsecuenciaDecision(
     partida.edadActual - partida.edadInicio
   );
 
-  const eventosEsteAnio = partida.eventos.filter((e) => e.anio === partida.edadActual).length;
-  const debeGenerarEvento = eventosEsteAnio < 2;
-
   let uso: UsoIA = usoVacio();
-  const promesaConsecuencia = procesarEleccion(
+  return procesarEleccion(
     estadoIA,
     { titulo: decision.titulo, opcion_elegida: opcionLetra, opcion_texto: opcionTitulo, tiempo_respuesta: tiempoRespuesta },
     instruccionMentor,
@@ -55,41 +57,39 @@ export function generarConsecuenciaDecision(
     (u) => {
       uso = sumarUso(uso, u);
     }
-  );
-  const promesaEvento = debeGenerarEvento
-    ? generarEvento(estadoIA, construirInstruccionTipoEvento(partida.eventos), (u) => {
-        uso = sumarUso(uso, u);
-      })
-    : null;
-  promesaEvento?.catch(() => {});
-
-  return (async () => {
-    const consecuencia = await promesaConsecuencia;
-    let siguienteEvento: EventoGenerado | null = null;
-    if (promesaEvento) {
-      try {
-        siguienteEvento = await promesaEvento;
-      } catch (error) {
-        console.error("Error generando siguiente evento con IA:", error);
-      }
-    }
-    return { consecuencia, siguienteEvento, uso };
-  })();
+  ).then((consecuencia) => ({ consecuencia, uso }));
 }
 
-// Mismo patrón que generarConsecuenciaDecision, para la consecuencia de un
-// evento (imprevisto/oportunidad) — usada por evento/route.ts y
+export function generarSiguienteEventoParaDecision(partida: PartidaConHistorial): Promise<ResultadoSiguienteEvento> {
+  const eventosEsteAnio = partida.eventos.filter((e) => e.anio === partida.edadActual).length;
+  if (eventosEsteAnio >= 2) return Promise.resolve({ siguienteEvento: null, uso: usoVacio() });
+
+  const historial = construirHistorial(partida);
+  const estadoIA = construirEstadoIA(partida, historial, null);
+  let uso: UsoIA = usoVacio();
+  return generarEvento(estadoIA, construirInstruccionTipoEvento(partida.eventos), (u) => {
+    uso = sumarUso(uso, u);
+  })
+    .then((siguienteEvento) => ({ siguienteEvento, uso }))
+    .catch((error) => {
+      console.error("Error generando siguiente evento con IA:", error);
+      return { siguienteEvento: null, uso };
+    });
+}
+
+// Mismo patrón que las dos de arriba, para la consecuencia/siguiente evento
+// de un evento (imprevisto/oportunidad) — usadas por evento/route.ts y
 // evento/simular/route.ts.
-export function generarConsecuenciaEvento(
+
+export function generarSoloConsecuenciaEvento(
   partida: PartidaConHistorial,
   evento: EventoGenerado,
   opcionLetra: string,
   opcionTexto: string,
   tiempoRespuesta: number
-): Promise<ResultadoGeneracionTurno> {
+): Promise<ResultadoConsecuencia> {
   const historial = construirHistorial(partida);
   const estadoIA = construirEstadoIA(partida, historial, evento.nombre);
-
   const totalTurnosPrevios = partida.decisiones.length + partida.eventos.length;
   const { instruccion: instruccionMentor, forzar: forzarMentor } = construirInstruccionMentor(
     partida.mentorActivo,
@@ -97,12 +97,8 @@ export function generarConsecuenciaEvento(
     partida.edadActual - partida.edadInicio
   );
 
-  const eventosEsteAnio = partida.eventos.filter((e) => e.anio === partida.edadActual).length + 1;
-  const debeGenerarEvento = eventosEsteAnio < 2;
-  const tiposConEsteEvento = [...partida.eventos, { tipoEvento: evento.tipo }];
-
   let uso: UsoIA = usoVacio();
-  const promesaConsecuencia = procesarEleccion(
+  return procesarEleccion(
     estadoIA,
     { titulo: evento.nombre, opcion_elegida: opcionLetra, opcion_texto: opcionTexto, tiempo_respuesta: tiempoRespuesta },
     instruccionMentor,
@@ -110,24 +106,26 @@ export function generarConsecuenciaEvento(
     (u) => {
       uso = sumarUso(uso, u);
     }
-  );
-  const promesaEvento = debeGenerarEvento
-    ? generarEvento(estadoIA, construirInstruccionTipoEvento(tiposConEsteEvento), (u) => {
-        uso = sumarUso(uso, u);
-      })
-    : null;
-  promesaEvento?.catch(() => {});
+  ).then((consecuencia) => ({ consecuencia, uso }));
+}
 
-  return (async () => {
-    const consecuencia = await promesaConsecuencia;
-    let siguienteEvento: EventoGenerado | null = null;
-    if (promesaEvento) {
-      try {
-        siguienteEvento = await promesaEvento;
-      } catch (error) {
-        console.error("Error generando siguiente evento con IA:", error);
-      }
-    }
-    return { consecuencia, siguienteEvento, uso };
-  })();
+export function generarSiguienteEventoParaEvento(
+  partida: PartidaConHistorial,
+  eventoActual: EventoGenerado
+): Promise<ResultadoSiguienteEvento> {
+  const eventosEsteAnio = partida.eventos.filter((e) => e.anio === partida.edadActual).length + 1;
+  if (eventosEsteAnio >= 2) return Promise.resolve({ siguienteEvento: null, uso: usoVacio() });
+
+  const historial = construirHistorial(partida);
+  const estadoIA = construirEstadoIA(partida, historial, eventoActual.nombre);
+  const tiposConEsteEvento = [...partida.eventos, { tipoEvento: eventoActual.tipo }];
+  let uso: UsoIA = usoVacio();
+  return generarEvento(estadoIA, construirInstruccionTipoEvento(tiposConEsteEvento), (u) => {
+    uso = sumarUso(uso, u);
+  })
+    .then((siguienteEvento) => ({ siguienteEvento, uso }))
+    .catch((error) => {
+      console.error("Error generando siguiente evento con IA:", error);
+      return { siguienteEvento: null, uso };
+    });
 }

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { EventoGenerado } from "@/lib/aiMotor";
-import { generarConsecuenciaEvento } from "@/lib/turnoGeneracion";
-import { clavePrecalculo, precalcular } from "@/lib/turnoCache";
+import { generarSoloConsecuenciaEvento, generarSiguienteEventoParaEvento } from "@/lib/turnoGeneracion";
+import { clavePrecalculo, claveSiguienteEvento, precalcular } from "@/lib/turnoCache";
 import type { UsoIA } from "@/lib/aiCost";
 
 interface Body {
@@ -50,8 +50,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ ok: false });
   }
 
-  const clave = clavePrecalculo(id, evento.nombre, opcion.letra);
-  precalcular(clave, () => generarConsecuenciaEvento(partida, evento, opcion.letra, opcion.texto, 0))
+  const claveConsecuencia = clavePrecalculo(id, evento.nombre, opcion.letra);
+  precalcular(claveConsecuencia, () => generarSoloConsecuenciaEvento(partida, evento, opcion.letra, opcion.texto, 0))
+    .then((resultado) => registrarUsoPrecalculo(id, resultado.uso))
+    .catch(() => {});
+
+  // Sin letra en la clave — compartida entre las 4 opciones (ver
+  // decision/simular/route.ts y lib/turnoGeneracion.ts).
+  const claveEvento = claveSiguienteEvento(id, evento.nombre);
+  precalcular(claveEvento, () => generarSiguienteEventoParaEvento(partida, evento))
     .then((resultado) => registrarUsoPrecalculo(id, resultado.uso))
     .catch(() => {});
 

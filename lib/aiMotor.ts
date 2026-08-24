@@ -9,12 +9,14 @@ const anthropic = new Anthropic();
 // Sonnet 5, no Opus — el usuario priorizó velocidad de respuesta sobre
 // profundidad narrativa (cada turno bloquea la UI hasta que la IA responde).
 const MODEL = "claude-sonnet-5";
-// Para el título+4 opciones de una decisión o evento (texto corto y
-// estructurado, sin necesidad de la prosa cinematográfica de una
-// consecuencia) Haiku responde notablemente más rápido que Sonnet sin
-// sacrificar calidad perceptible — se usa solo ahí. La narrativa de
-// consecuencia, la reflexión final y el análisis final se quedan en Sonnet,
-// donde sí importa la calidad de la escritura.
+// Decisión de costo 23 ago 2026: con el precálculo de las 4 opciones
+// posibles (ver lib/turnoGeneracion.ts), procesarEleccion pasó a correr 4x
+// por turno en vez de 1x — a precio Sonnet eso solo salía ~$2.44 de los
+// ~$3.15 por alumno (3 partidas de 7 años + informes). Se movió a Haiku acá
+// también para que la velocidad no salga tan cara — sacrifica algo de
+// calidad de prosa en el desenlace de cada decisión/evento a cambio. La
+// reflexión final y el análisis final (una sola vez por partida, no 4x)
+// se quedan en Sonnet, donde el costo real es bajo y la calidad importa más.
 const MODEL_RAPIDO = "claude-haiku-4-5-20251001";
 
 // Sistema condensado a partir de ModoGOAT_Prompt_Motor.md — se mantienen las
@@ -551,7 +553,8 @@ export async function procesarEleccion(
     schema,
     { decision_tomada: decisionTomada, instruccion_adicional: instruccionAdicional },
     1024,
-    registrarUso
+    registrarUso,
+    MODEL_RAPIDO
   );
 
   const skillsModificadas: Record<string, number> = {};

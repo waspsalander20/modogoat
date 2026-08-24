@@ -7,8 +7,13 @@ import { sanitizarTextoLibre } from "@/lib/sanitizarTexto";
 import { aplicarSkills, sumarPuntos, calcularPerfil } from "@/lib/motor";
 import type { Puntos } from "@/lib/types";
 import { usoVacio, sumarUso, type UsoIA } from "@/lib/aiCost";
-import { generarConsecuenciaDecision, type ResultadoGeneracionTurno } from "@/lib/turnoGeneracion";
-import { clavePrecalculo, tomarPrecalculo } from "@/lib/turnoCache";
+import {
+  generarSoloConsecuenciaDecision,
+  generarSiguienteEventoParaDecision,
+  type ResultadoConsecuencia,
+  type ResultadoSiguienteEvento,
+} from "@/lib/turnoGeneracion";
+import { clavePrecalculo, claveSiguienteEvento, tomarPrecalculo } from "@/lib/turnoCache";
 
 interface Body {
   opcionLetra: "A" | "B" | "C" | "D";
@@ -85,26 +90,37 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ ok: true, turno: nuevoTurnoInicial });
   }
 
-  // Mientras el jugador leía las 4 opciones, ya se venía precalculando la
-  // consecuencia de esta letra en segundo plano (ver decision/simular/route.ts
-  // y lib/turnoCache.ts) — si ya está (o casi) lista, se reusa acá en vez de
-  // volver a llamar a la IA; si no, se genera fresco como siempre.
-  const clave = clavePrecalculo(id, decision.titulo, opcion.letra);
-  const precalculo = tomarPrecalculo<ResultadoGeneracionTurno>(clave);
+  // Mientras el jugador leía las 4 opciones, ya se venían precalculando en
+  // segundo plano tanto la consecuencia de esta letra como el próximo evento
+  // (compartido entre las 4, no depende de cuál eligió — ver
+  // decision/simular/route.ts y lib/turnoGeneracion.ts). Si ya están (o casi)
+  // listos, se reusan acá en vez de volver a llamar a la IA; si no, se
+  // generan frescos como siempre.
+  const claveConsecuencia = clavePrecalculo(id, decision.titulo, opcion.letra);
+  const precalculoConsecuencia = tomarPrecalculo<ResultadoConsecuencia>(claveConsecuencia);
+  const claveEvento = claveSiguienteEvento(id, decision.titulo);
+  const precalculoEvento = tomarPrecalculo<ResultadoSiguienteEvento>(claveEvento);
 
-  let resultado: ResultadoGeneracionTurno;
+  let resultadoConsecuencia: ResultadoConsecuencia;
+  let resultadoEvento: ResultadoSiguienteEvento;
   try {
-    resultado = precalculo
-      ? await precalculo
-      : await generarConsecuenciaDecision(partida, decision, opcion.letra, opcion.titulo, body.tiempoRespuesta ?? 0);
+    [resultadoConsecuencia, resultadoEvento] = await Promise.all([
+      precalculoConsecuencia ?? generarSoloConsecuenciaDecision(partida, decision, opcion.letra, opcion.titulo, body.tiempoRespuesta ?? 0),
+      precalculoEvento ?? generarSiguienteEventoParaDecision(partida),
+    ]);
   } catch (error) {
     console.error("Error procesando decisión con IA:", error);
     return NextResponse.json({ error: "No pudimos continuar tu historia. Intenta de nuevo." }, { status: 502 });
   }
-  const { consecuencia, siguienteEvento, uso } = resultado;
-  // Si vino del precálculo, decision/simular/route.ts ya sumó su costo real
-  // apenas terminó de generarse — sumarlo de nuevo acá lo duplicaría.
-  const usoParaSumar = precalculo ? { inputTokens: 0, outputTokens: 0, cacheWriteTokens: 0, cacheReadTokens: 0 } : uso;
+  const { consecuencia } = resultadoConsecuencia;
+  const { siguienteEvento } = resultadoEvento;
+  // Si cada pieza vino del precálculo, decision/simular/route.ts ya sumó su
+  // costo real apenas terminó de generarse — sumarlo de nuevo acá lo
+  // duplicaría. Cada una se evalúa por separado porque pueden venir de
+  // fuentes distintas (una del caché, la otra generada fresca acá mismo).
+  const usoConsecuencia = precalculoConsecuencia ? usoVacio() : resultadoConsecuencia.uso;
+  const usoEvento = precalculoEvento ? usoVacio() : resultadoEvento.uso;
+  const usoParaSumar = sumarUso(usoConsecuencia, usoEvento);
 
   const ingresoAntes = partida.ingresoActual;
   const ingresoDespues = consecuencia.ingresoNuevo;

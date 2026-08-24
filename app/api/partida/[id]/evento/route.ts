@@ -4,8 +4,14 @@ import { Prisma } from "@/lib/generated/prisma/client";
 import type { EventoGenerado } from "@/lib/aiMotor";
 import { aplicarSkills, sumarPuntos, calcularPerfil } from "@/lib/motor";
 import type { Puntos } from "@/lib/types";
-import { generarConsecuenciaEvento, type ResultadoGeneracionTurno } from "@/lib/turnoGeneracion";
-import { clavePrecalculo, tomarPrecalculo } from "@/lib/turnoCache";
+import { usoVacio, sumarUso } from "@/lib/aiCost";
+import {
+  generarSoloConsecuenciaEvento,
+  generarSiguienteEventoParaEvento,
+  type ResultadoConsecuencia,
+  type ResultadoSiguienteEvento,
+} from "@/lib/turnoGeneracion";
+import { clavePrecalculo, claveSiguienteEvento, tomarPrecalculo } from "@/lib/turnoCache";
 
 interface Body {
   opcionLetra: "A" | "B" | "C" | "D";
@@ -39,24 +45,33 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Opción inválida" }, { status: 400 });
   }
 
-  // Mismo precálculo en segundo plano que decision/route.ts — ver
-  // evento/simular/route.ts y lib/turnoCache.ts.
-  const clave = clavePrecalculo(id, evento.nombre, opcion.letra);
-  const precalculo = tomarPrecalculo<ResultadoGeneracionTurno>(clave);
+  // Mismo precálculo en segundo plano que decision/route.ts (consecuencia +
+  // próximo evento por separado, el evento compartido entre las 4 opciones)
+  // — ver evento/simular/route.ts y lib/turnoGeneracion.ts.
+  const claveConsecuencia = clavePrecalculo(id, evento.nombre, opcion.letra);
+  const precalculoConsecuencia = tomarPrecalculo<ResultadoConsecuencia>(claveConsecuencia);
+  const claveEvento = claveSiguienteEvento(id, evento.nombre);
+  const precalculoEvento = tomarPrecalculo<ResultadoSiguienteEvento>(claveEvento);
 
-  let resultado: ResultadoGeneracionTurno;
+  let resultadoConsecuencia: ResultadoConsecuencia;
+  let resultadoEvento: ResultadoSiguienteEvento;
   try {
-    resultado = precalculo
-      ? await precalculo
-      : await generarConsecuenciaEvento(partida, evento, opcion.letra, opcion.texto, body.tiempoRespuesta ?? 0);
+    [resultadoConsecuencia, resultadoEvento] = await Promise.all([
+      precalculoConsecuencia ?? generarSoloConsecuenciaEvento(partida, evento, opcion.letra, opcion.texto, body.tiempoRespuesta ?? 0),
+      precalculoEvento ?? generarSiguienteEventoParaEvento(partida, evento),
+    ]);
   } catch (error) {
     console.error("Error procesando evento con IA:", error);
     return NextResponse.json({ error: "No pudimos continuar tu historia. Intenta de nuevo." }, { status: 502 });
   }
-  const { consecuencia, siguienteEvento, uso } = resultado;
-  // Si vino del precálculo, evento/simular/route.ts ya sumó su costo real
-  // apenas terminó de generarse — sumarlo de nuevo acá lo duplicaría.
-  const usoParaSumar = precalculo ? { inputTokens: 0, outputTokens: 0, cacheWriteTokens: 0, cacheReadTokens: 0 } : uso;
+  const { consecuencia } = resultadoConsecuencia;
+  const { siguienteEvento } = resultadoEvento;
+  // Si cada pieza vino del precálculo, evento/simular/route.ts ya sumó su
+  // costo real apenas terminó de generarse — sumarlo de nuevo acá lo
+  // duplicaría.
+  const usoConsecuencia = precalculoConsecuencia ? usoVacio() : resultadoConsecuencia.uso;
+  const usoEvento = precalculoEvento ? usoVacio() : resultadoEvento.uso;
+  const usoParaSumar = sumarUso(usoConsecuencia, usoEvento);
 
   const ingresoAntes = partida.ingresoActual;
   const ingresoDespues = consecuencia.ingresoNuevo;
