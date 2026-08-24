@@ -13,9 +13,14 @@ const TUTORIAL_BEATS = 7;
 type Paso =
   | { tipo: "tutorial"; index: number }
   | { tipo: "datos" }
+  | { tipo: "carrera" }
   | { tipo: "contexto" }
   | { tipo: "pregunta"; index: number }
   | { tipo: "enviando" };
+
+// Umbral desde el que tiene sentido preguntar "¿ya tienes una carrera?" —
+// por debajo de esto casi nadie salió ya del colegio a trabajar/estudiar.
+const EDAD_MINIMA_PARA_PREGUNTAR_CARRERA = 20;
 
 function mezclar<T>(arr: T[]): T[] {
   const copia = [...arr];
@@ -29,6 +34,8 @@ function mezclar<T>(arr: T[]): T[] {
 export default function OnboardingWizard({
   nombre,
   datosCompletos,
+  edadJugador,
+  preguntarCarrera,
   programaSlug,
   paisInicial,
 }: {
@@ -39,11 +46,25 @@ export default function OnboardingWizard({
   // contexto/trabaja ya están guardados en su cuenta — en ese caso el
   // wizard salta directo a las preguntas, no vuelve a pedir esos datos.
   datosCompletos: boolean;
+  // Edad ya guardada en la cuenta (null si es la primera partida y todavía
+  // no se pidió) — solo se usa para decidir si hay que preguntar carrera
+  // cuando datosCompletos ya es true.
+  edadJugador: number | null;
+  // true si jugador.yaTieneCarrera todavía es null — o sea, nunca se le
+  // preguntó. Si es false, ya respondió antes y no se le vuelve a preguntar.
+  preguntarCarrera: boolean;
   programaSlug?: string;
   paisInicial?: PaisId;
 }) {
   const router = useRouter();
-  const [paso, setPaso] = useState<Paso>(datosCompletos ? { tipo: "pregunta", index: 0 } : { tipo: "tutorial", index: 0 });
+  const preguntarCarreraAlInicio = datosCompletos && preguntarCarrera && (edadJugador ?? 0) > EDAD_MINIMA_PARA_PREGUNTAR_CARRERA;
+  const [paso, setPaso] = useState<Paso>(
+    datosCompletos
+      ? preguntarCarreraAlInicio
+        ? { tipo: "carrera" }
+        : { tipo: "pregunta", index: 0 }
+      : { tipo: "tutorial", index: 0 }
+  );
   const [error, setError] = useState<string | null>(null);
 
   // Si la partida viene de un link institucional (?programa=...), el país
@@ -56,6 +77,7 @@ export default function OnboardingWizard({
   const [ciudad, setCiudad] = useState(CONFIG_PAIS[paisInicial ?? "CO"].ciudadEjemplo);
   const [contexto, setContexto] = useState("");
   const [trabaja, setTrabaja] = useState("");
+  const [yaTieneCarrera, setYaTieneCarrera] = useState<boolean | null>(null);
 
   const [respuestas, setRespuestas] = useState<Record<string, string>>({});
   const [tiempos, setTiempos] = useState<Record<string, number>>({});
@@ -68,6 +90,17 @@ export default function OnboardingWizard({
     () => PREGUNTAS_ONBOARDING.map((p) => mezclar(p.opciones)),
     []
   );
+
+  // Tras responder la pregunta de carrera, un jugador nuevo (!datosCompletos)
+  // sigue al paso de contexto de siempre; uno que vuelve (datosCompletos)
+  // ya tiene ese contexto guardado, así que va directo a las preguntas.
+  function continuarDespuesDeCarrera() {
+    if (datosCompletos) {
+      irAPregunta(0);
+    } else {
+      setPaso({ tipo: "contexto" });
+    }
+  }
 
   function irAPregunta(index: number) {
     setInicioPregunta(Date.now());
@@ -90,6 +123,7 @@ export default function OnboardingWizard({
           programaSlug,
           contexto: contexto || undefined,
           trabaja: trabaja || undefined,
+          yaTieneCarrera: yaTieneCarrera ?? undefined,
           respuestas: respuestasFinal,
           tiempos: tiemposFinal,
         }),
@@ -171,7 +205,43 @@ export default function OnboardingWizard({
             <button
               className="btn-onboarding self-start"
               disabled={!edad || Number(edad) < 14 || Number(edad) > 28 || !genero}
-              onClick={() => setPaso({ tipo: "contexto" })}
+              onClick={() =>
+                setPaso(
+                  preguntarCarrera && Number(edad) > EDAD_MINIMA_PARA_PREGUNTAR_CARRERA
+                    ? { tipo: "carrera" }
+                    : { tipo: "contexto" }
+                )
+              }
+            >
+              Continuar ›
+            </button>
+          </div>
+        )}
+
+        {paso.tipo === "carrera" && (
+          <div className="flex flex-col gap-6 flex-1 justify-center">
+            <h1 className="text-2xl font-extrabold text-white">Una pregunta más</h1>
+            <p className="onboarding-label text-sm">
+              ¿Ya tienes una carrera u oficio del que vives o te formaste?
+            </p>
+            <div className="flex flex-col gap-2">
+              {[
+                { v: true, t: "Sí, ya tengo una carrera u oficio" },
+                { v: false, t: "No, todavía no" },
+              ].map((o) => (
+                <button
+                  key={String(o.v)}
+                  onClick={() => setYaTieneCarrera(o.v)}
+                  className={`onboarding-option px-4 py-4 text-left ${yaTieneCarrera === o.v ? "seleccionada" : ""}`}
+                >
+                  {o.t}
+                </button>
+              ))}
+            </div>
+            <button
+              className="btn-onboarding self-start"
+              disabled={yaTieneCarrera === null}
+              onClick={continuarDespuesDeCarrera}
             >
               Continuar ›
             </button>

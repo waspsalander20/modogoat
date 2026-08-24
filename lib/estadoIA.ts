@@ -20,7 +20,14 @@ interface PartidaConDatos {
   // el onboarding de la primera partida — ver Jugador en schema.prisma),
   // pero toda partida que llega hasta acá ya pasó por ese onboarding, así
   // que en la práctica siempre vienen set.
-  jugador: { nombre: string; ciudad: string; pais: string; contexto: string | null; trabaja: string | null };
+  jugador: {
+    nombre: string;
+    ciudad: string;
+    pais: string;
+    contexto: string | null;
+    trabaja: string | null;
+    yaTieneCarrera?: boolean | null;
+  };
 }
 
 interface DecisionOEventoReciente {
@@ -43,6 +50,7 @@ export function construirEstadoIA(
     pais: normalizarPais(partida.jugador.pais),
     contexto_familiar: partida.jugador.contexto ?? "",
     trabaja: partida.jugador.trabaja ?? "",
+    ya_tiene_carrera: partida.jugador.yaTieneCarrera ?? null,
     area_libre: partida.areaLibre,
     ruta_entrada: partida.rutaEntrada,
     perfil_dominante: (partida.perfilDominante as PerfilId) ?? null,

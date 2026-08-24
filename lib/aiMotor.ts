@@ -179,6 +179,12 @@ export interface EstadoIA {
   pais: PaisId;
   contexto_familiar: string;
   trabaja: string;
+  // true solo si el jugador tenía más de 20 años al hacer el onboarding y
+  // respondió que sí ya tiene una carrera/oficio (ver Jugador.yaTieneCarrera
+  // en schema.prisma) — cambia el enfoque de la primera decisión de la
+  // partida, ver generarDecisionDeAnio. undefined/null = pregunta no
+  // aplicable (menor de 20, o cuenta previa a este campo).
+  ya_tiene_carrera?: boolean | null;
   area_libre: string | null;
   ruta_entrada: string | null;
   perfil_dominante: PerfilId | null;
@@ -412,7 +418,11 @@ export async function generarDecisionDeAnio(
 ): Promise<DecisionGenerada> {
   const esPrimeraDecisionDelJuego = estado.historial_decisiones.length === 0 && !contexto?.pasoInicialElegido;
   const instruccion_adicional = contexto?.pasoInicialElegido
-    ? `El jugador ya eligió su camino general: "${contexto.pasoInicialElegido}", y su área de interés específica ya está en area_libre. tiene_campo_libre debe ser false. Genera una decisión concreta de 4 opciones sobre CÓMO arranca específicamente en esa área este año (ej: autoaprendizaje, buscar una pasantía o aprendiz, tomar un curso corto, empezar ya con un cliente o proyecto pequeño) — opciones realistas y específicas al área que escribió, nunca genéricas.`
+    ? estado.ya_tiene_carrera
+      ? `El jugador YA tiene carrera/oficio en "${estado.area_libre}" y acaba de elegir: "${contexto.pasoInicialElegido}". tiene_campo_libre debe ser false. Genera una decisión concreta de 4 opciones sobre el PRIMER PASO CONCRETO este año dentro de ese camino que ya eligió (si eligió seguir como dependiente: buscar un mejor puesto, pedir un aumento o ascenso, capacitarse más en lo suyo, cambiarse a otra empresa del rubro; si eligió emprender: validar el negocio con sus primeros clientes, conseguir capital inicial, dejar el trabajo actual gradual o de golpe, conseguir un socio) — opciones realistas para alguien que YA sabe hacer su oficio, nunca como si estuviera empezando a formarse desde cero.`
+      : `El jugador ya eligió su camino general: "${contexto.pasoInicialElegido}", y su área de interés específica ya está en area_libre. tiene_campo_libre debe ser false. Genera una decisión concreta de 4 opciones sobre CÓMO arranca específicamente en esa área este año (ej: autoaprendizaje, buscar una pasantía o aprendiz, tomar un curso corto, empezar ya con un cliente o proyecto pequeño) — opciones realistas y específicas al área que escribió, nunca genéricas.`
+    : esPrimeraDecisionDelJuego && estado.ya_tiene_carrera
+    ? "Esta es la PRIMERA decisión de toda la partida, pero el jugador YA tiene una carrera u oficio (es mayor de 20 y así lo indicó en el onboarding) — no arranca de cero. tiene_campo_libre debe ser true, preguntando en qué carrera/oficio ya trabaja o se formó (este texto se guarda como area_libre y personaliza el resto de la partida, igual que en el flujo normal). La decisión en sí NO debe ser sobre universidad/técnica/trabajar — debe ser sobre seguir como dependiente/empleado en lo suyo vs. emprender por su cuenta en esa misma área (ej: quedarse asalariado y crecer ahí adentro, independizarse como freelancer en su especialidad, montar su propio negocio o consultorio en su campo, buscar un empleo nuevo y mejor en el mismo rubro) — opciones realistas para alguien que ya tiene el oficio resuelto, nunca planteadas como si estuviera eligiendo qué estudiar."
     : esPrimeraDecisionDelJuego
     ? "Esta es la PRIMERA decisión de toda la partida. Tiene que ser sobre qué camino formativo/laboral general va a tomar el jugador al salir del colegio (universidad, técnica, emprender, trabajar). tiene_campo_libre debe ser true, preguntando en qué área quiere formarse o trabajar — este dato se usa para personalizar todo el resto de la partida."
     : "Esta NO es la primera decisión. tiene_campo_libre debe ser false — el área del jugador ya se conoce (está en area_libre) y no se vuelve a preguntar.";

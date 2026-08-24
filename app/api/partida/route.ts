@@ -16,6 +16,7 @@ interface CrearPartidaBody {
   programaSlug?: string;
   contexto?: string;
   trabaja?: string;
+  yaTieneCarrera?: boolean;
   respuestas: Record<string, string>;
   tiempos: Record<string, number>;
   areaLibre?: string;
@@ -91,11 +92,27 @@ export async function POST(request: NextRequest) {
   const trabaja = esPrimeraPartida ? (body.trabaja as string) : jugador.trabaja!;
   const pais = esPrimeraPartida ? normalizarPais(programa?.pais ?? body.pais) : normalizarPais(jugador.pais);
 
+  // yaTieneCarrera se persiste apenas se responde una vez, sin importar si
+  // es la primera partida — la pregunta solo se hace (ver OnboardingWizard.tsx)
+  // mientras jugador.yaTieneCarrera siga en null, así que si llega en el
+  // body es porque de verdad tocaba preguntarla.
+  const actualizacionesJugador: Record<string, unknown> = {};
   if (esPrimeraPartida) {
-    await prisma.jugador.update({
-      where: { id: jugador.id },
-      data: { edad, genero, ciudad, pais, contexto, trabaja, programaId: programa?.id ?? jugador.programaId },
+    Object.assign(actualizacionesJugador, {
+      edad,
+      genero,
+      ciudad,
+      pais,
+      contexto,
+      trabaja,
+      programaId: programa?.id ?? jugador.programaId,
     });
+  }
+  if (typeof body.yaTieneCarrera === "boolean" && jugador.yaTieneCarrera === null) {
+    actualizacionesJugador.yaTieneCarrera = body.yaTieneCarrera;
+  }
+  if (Object.keys(actualizacionesJugador).length > 0) {
+    await prisma.jugador.update({ where: { id: jugador.id }, data: actualizacionesJugador });
   }
 
   const partida = await prisma.partida.create({

@@ -63,6 +63,13 @@ model Jugador {
   pais                   String    @default("CO")
   contexto               String?
   trabaja                String?
+  // Solo se pregunta si edad > 20 al hacer el onboarding (ver OnboardingWizard.tsx)
+  // — null para todos los menores y para cualquier cuenta creada antes de este
+  // campo. Cambia el enfoque de la PRIMERA decisión de cada partida (todas, no
+  // solo la primera): en vez de "¿universidad, técnica o trabajar?" (que asume
+  // que arranca de cero), pasa a ser sobre seguir como dependiente o emprender
+  // en la carrera que ya tiene — ver regla en aiMotor.ts generarDecisionDeAnio.
+  yaTieneCarrera         Boolean?
   programaId             String?
   programa               Programa? @relation(fields: [programaId], references: [id])
   createdAt              DateTime  @default(now())

@@ -25,6 +25,8 @@ export default async function OnboardingPage({
     <OnboardingWizard
       nombre={jugador.nombre}
       datosCompletos={jugador.edad !== null}
+      edadJugador={jugador.edad}
+      preguntarCarrera={jugador.yaTieneCarrera === null}
       programaSlug={programa?.slug}
       paisInicial={programa ? normalizarPais(programa.pais) : undefined}
     />
