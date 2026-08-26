@@ -46,7 +46,23 @@ const DEMANDA_PE: CategoriaDemanda[] = [
   { nombre: "Construcción / Ing. Civil", palabrasClave: ["construcción", "construccion", "civil", "arquitect"] },
 ];
 
-const DEMANDA_POR_PAIS: Record<PaisId, CategoriaDemanda[]> = { CO: DEMANDA_CO, PE: DEMANDA_PE };
+// Argentina: sin equivalente estatal a OLE (Colombia)/PRONABEC (Perú) —
+// mejor fuente disponible es Randstad Argentina, "12 carreras con demanda
+// laboral 2026" (26 ago 2026, investigación organizada primero en artifact
+// aparte y aprobada antes de este commit). Es una consultora de RR.HH., no
+// un organismo de gobierno — etiquetado igual en la UI como estimado.
+const DEMANDA_AR: CategoriaDemanda[] = [
+  { nombre: "Ingeniería", palabrasClave: ["ingenier"] },
+  { nombre: "Marketing digital", palabrasClave: ["marketing", "publicidad", "mercadeo"] },
+  { nombre: "Enfermería", palabrasClave: ["enfermer"] },
+  { nombre: "Sistemas / Programación", palabrasClave: ["sistema", "software", "programación", "programador", "desarroll", "análisis de dato", "analisis de dato", "tecnolog", "informátic", "informatic", "computación", "computacion"] },
+  { nombre: "Logística / Supply chain", palabrasClave: ["logístic", "logistic", "supply chain", "cadena de suministro"] },
+  { nombre: "Energías renovables", palabrasClave: ["energía renovable", "energia renovable", "solar", "eólic", "eolic"] },
+  { nombre: "Negocios digitales / Economía / Finanzas", palabrasClave: ["negocio", "economía", "economia", "finanza", "administra", "empresa", "gerenc", "gestión", "gestion"] },
+  { nombre: "Biotecnología / Ciencias ambientales", palabrasClave: ["biotecnolog", "ambiental", "ecolog"] },
+];
+
+const DEMANDA_POR_PAIS: Record<PaisId, CategoriaDemanda[]> = { CO: DEMANDA_CO, PE: DEMANDA_PE, AR: DEMANDA_AR };
 
 export function clasificarAreaLibre(areaLibre: string, pais: PaisId): string | null {
   const texto = areaLibre.toLowerCase();

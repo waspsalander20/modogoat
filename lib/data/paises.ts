@@ -1,11 +1,11 @@
 import type { PerfilId } from "@/lib/types";
 
-export type PaisId = "CO" | "PE";
+export type PaisId = "CO" | "PE" | "AR";
 
 export const PAIS_DEFECTO: PaisId = "CO";
 
 export function esPaisValido(pais: string | null | undefined): pais is PaisId {
-  return pais === "CO" || pais === "PE";
+  return pais === "CO" || pais === "PE" || pais === "AR";
 }
 
 export function normalizarPais(pais: string | null | undefined): PaisId {
@@ -93,9 +93,33 @@ interface ConfigPais {
 //   2026), que al mismo tipo de cambio da S/3.400-6.800/mes — S/3.500 cae
 //   en el piso de ese rango, coherente con anclar al punto de entrada real
 //   (mismo criterio que CRE Colombia).
+// Argentina, investigación independiente 26 ago 2026 (organizada primero en
+// un artifact aparte, revisada y aprobada antes de este commit):
+// - EMP: RIPTE (remuneración imponible promedio de trabajadores estables),
+//   INDEC, junio 2026 — $1.915.878,76/mes, redondeado a $1.900.000.
+// - INV: sin encuesta propia que separe "profesional especializado" de
+//   "empleado promedio" en Argentina (a diferencia de Perú, que sí tuvo
+//   fuente INEI independiente) — se aplica el mismo ratio ~1.5x EMP que usan
+//   Colombia y Perú. Pendiente: reemplazar por una fuente propia si aparece.
+// - EMP2: ancla al SMVM (mismo criterio que CO/PE — el arranque real de un
+//   emprendedor tiende a $0 y sube hasta cruzar el mínimo, ver regla 6c en
+//   aiMotor.ts). Nota: a diferencia de CO/PE, el ingreso real promedio de
+//   informales en Argentina (EPH 2025, ~$500.000/mes vía Perfil) es MÁS ALTO
+//   que el SMVM — se decidió mantener el SMVM por consistencia de criterio
+//   entre países, no porque sea el número "más alto" disponible.
+// - FREE: freelancers argentinos cobran US$25/hora en promedio (El Cronista,
+//   vs. US$17/h regional) — a 60-80h facturables/mes × dólar oficial ~$1.535
+//   (26 ago 2026) da un rango de $2.300.000-$3.070.000/mes; $2.500.000 cae
+//   en el extremo bajo de ese rango. A diferencia de COP/PEN, este número
+//   depende del tipo de cambio del día — ARS es mucho más volátil, revisar
+//   con más frecuencia.
+// - CRE: nano-influencer $30.000-$80.000 ARS por publicación — mismo
+//   criterio que CO/PE (ancla a 2-3 publicaciones/mes en el rango bajo, el
+//   punto de entrada real del perfil, no un influencer ya armado).
 export const SALARIOS_BASE: Record<PaisId, Record<PerfilId, number>> = {
   CO: { EMP: 4_000_000, INV: 6_000_000, EMP2: 2_000_000, FREE: 2_500_000, CRE: 2_000_000 },
   PE: { EMP: 2_800, INV: 4_200, EMP2: 1_130, FREE: 4_200, CRE: 3_500 },
+  AR: { EMP: 1_900_000, INV: 2_800_000, EMP2: 376_600, FREE: 2_500_000, CRE: 100_000 },
 };
 
 export const CONFIG_PAIS: Record<PaisId, ConfigPais> = {
@@ -178,6 +202,42 @@ export const CONFIG_PAIS: Record<PaisId, ConfigPais> = {
       informal: "S/700-S/1.300/mes",
       profesional: "S/3.500-S/12.000/mes",
       excepcional: "hasta S/90.000+/mes",
+    },
+  },
+  // Argentina, investigación 26 ago 2026 (organizada primero en un artifact
+  // aparte, revisada y aprobada antes de este commit — ver también
+  // SALARIOS_BASE.AR arriba).
+  AR: {
+    nombre: "Argentina",
+    ciudadEjemplo: "Buenos Aires",
+    monedaCodigo: "ARS",
+    // Mismo símbolo "$" que Colombia — sin ambigüedad en el código porque
+    // Intl.NumberFormat usa monedaCodigo, pero si alguna vez se muestra el
+    // símbolo solo (sin país al lado) en la UI, hay que tenerlo presente.
+    monedaSimbolo: "$",
+    locale: "es-AR",
+    // SMVM agosto 2026 (Rosario Finanzas / Infobae) — sube muy rápido
+    // (16,8% entre nov.2025 y ago.2026), revisar con más frecuencia que
+    // Colombia/Perú.
+    salarioMinimo: 376_600,
+    // Decisión de producto (no derivada) — coincide con el techo del rango
+    // "profesional" de abajo, mismo criterio que Colombia/Perú.
+    umbralGoat: 9_000_000,
+    rangosIngreso: {
+      // EPH 2025: ingreso promedio de trabajadores informales $500.000/mes
+      // (vía Perfil) — más alto que el salario mínimo, a diferencia de
+      // Colombia/Perú donde el ingreso informal real y el mínimo legal caían
+      // cerca uno del otro.
+      informal: "$350.000-$600.000/mes",
+      // Piso = RIPTE jun.2026 ($1.915.878,76, INDEC). Techo = "sueldo que
+      // necesitó un ejecutivo para vivir" ~$9,7M (iProfesional 2026),
+      // redondeado a $9M para que coincida con el umbral GOAT. El punto
+      // medio de este rango todavía no tiene una fuente propia — pendiente
+      // de una encuesta salarial más granular si se quiere afinar.
+      profesional: "$1.900.000-$9.000.000/mes",
+      // Industria pesada promedia $25.569.600/mes; directores financieros de
+      // empresas grandes en CABA hasta $19.049.930/mes (iProfesional 2026).
+      excepcional: "hasta $25.000.000+/mes",
     },
   },
 };

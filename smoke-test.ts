@@ -85,6 +85,10 @@ caso("calcularGastos: Perú corre el último tramo un año más tarde (independe
   assert.equal(calcularGastos(29, "PE"), 0.65);
   assert.equal(calcularGastos(27, "CO"), 0.65, "Colombia no cambia — el tramo sigue en 27+");
 });
+caso("calcularGastos: Argentina usa el mismo tramo que Colombia (27+), no el de Perú", () => {
+  assert.equal(calcularGastos(27, "AR"), 0.65, "Buenos Aires (ciudadEjemplo) se independiza en promedio a los 27, igual que Colombia");
+  assert.equal(calcularGastos(26, "AR"), 0.45);
+});
 
 // --- aplicarSkills ---
 caso("aplicarSkills: suma y clampea entre 0 y 5", () => {
@@ -168,6 +172,12 @@ caso("calcularSalarioProyectado: el multiplicador de inglés ahora se resuelve p
   // sea igual al de "CO".
   const salarioPE = calcularSalarioProyectado("FREE", { ingles: 4 }, "PE");
   assert.equal(salarioPE, Math.round(4_200 * 2.2), "salario base FREE Perú (S/4.200) × multiplicador nivel4 (2.2)");
+});
+caso("calcularSalarioProyectado: Argentina tiene su propia escala de salarios base", () => {
+  assert.equal(calcularSalarioProyectado("EMP2", {}, "AR"), 376_600, "EMP2 Argentina ancla al SMVM ago.2026");
+  assert.notEqual(calcularSalarioProyectado("EMP2", {}, "AR"), calcularSalarioProyectado("EMP2", {}, "CO"));
+  const salarioAR = calcularSalarioProyectado("FREE", { ingles: 4 }, "AR");
+  assert.equal(salarioAR, Math.round(2_500_000 * 2.2), "salario base FREE Argentina ($2.500.000) × multiplicador nivel4 (2.2)");
 });
 
 // --- determinarResultado ---
@@ -601,6 +611,11 @@ caso("clasificarAreaLibre: matchea carreras de alta demanda real por país", () 
   assert.equal(clasificarAreaLibre("Negocios y ventas", "CO"), "Administración / Negocios");
   assert.equal(clasificarAreaLibre("Enfermería", "PE"), "Enfermería");
   assert.equal(clasificarAreaLibre("Moda sostenible", "CO"), null, "un área sin match no debe forzar una categoría");
+});
+caso("clasificarAreaLibre: Argentina tiene su propia lista (Randstad 2026)", () => {
+  assert.equal(clasificarAreaLibre("Enfermería", "AR"), "Enfermería");
+  assert.equal(clasificarAreaLibre("Ingeniería civil", "AR"), "Ingeniería");
+  assert.equal(clasificarAreaLibre("Programación", "AR"), "Sistemas / Programación");
 });
 caso("clasificarAreaLibre: 'programa' como palabra suelta no debe matchear Sistemas/TIC (falso positivo real encontrado en datos)", () => {
   assert.equal(clasificarAreaLibre("Creación de contenido audiovisual y lanzamientos de educación programas", "CO"), null);

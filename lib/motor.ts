@@ -52,6 +52,12 @@ export const DURACION_ANIOS = 7;
 // edad ajustado a la realidad local — no hay un estudio de porcentaje de
 // gasto específico de Perú todavía, así que las fracciones (0/0.25/0.45/
 // 0.65) se mantienen sin cambio, solo los tramos de edad.
+//
+// Argentina (26 ago 2026) usa el mismo tramo que Colombia (26) a propósito,
+// no por default silencioso: la edad mediana nacional de independencia es
+// 28,1 años, pero específicamente en Buenos Aires (nuestro ciudadEjemplo)
+// el 50% ya se independizó a los ~27 (UADE, vía Infobae/Cronista) — coincide
+// con el tramo de Colombia, no con el de Perú.
 export function calcularGastos(edad: number, pais: PaisId = PAIS_DEFECTO): number {
   const ultimoTramo = pais === "PE" ? 28 : 26;
   if (edad <= 18) return 0.0;
@@ -203,6 +209,17 @@ const MULTIPLICADOR_INGLES_POR_PAIS_Y_PERFIL: Record<PaisId, Record<PerfilId, { 
     CRE: { nivel2: 1.3, nivel4: 2.0 },
   },
   PE: {
+    EMP: { nivel2: 1.3, nivel4: 1.5 },
+    INV: { nivel2: 1.3, nivel4: 1.5 },
+    EMP2: { nivel2: 1.3, nivel4: 1.5 },
+    FREE: { nivel2: 1.3, nivel4: 2.2 },
+    CRE: { nivel2: 1.3, nivel4: 2.0 },
+  },
+  // Argentina, 26 ago 2026: mdzol.com reporta 20%-35% más de salario para
+  // dominio avanzado de inglés — converge con el rango que ya usábamos
+  // (Pearson 2024: hasta 50%), mismo patrón de "no hay evidencia de que
+  // difiera" que Perú.
+  AR: {
     EMP: { nivel2: 1.3, nivel4: 1.5 },
     INV: { nivel2: 1.3, nivel4: 1.5 },
     EMP2: { nivel2: 1.3, nivel4: 1.5 },
