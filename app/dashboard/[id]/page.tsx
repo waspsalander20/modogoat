@@ -35,9 +35,18 @@ export default async function DashboardIndividualPage({ params }: { params: Prom
 
   return (
     <main className="flex flex-1 flex-col px-6 py-10 max-w-2xl mx-auto w-full gap-6">
-      <Link href="/dashboard" className="text-goat-accent-solid text-sm font-bold">
-        ← Volver
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link href="/dashboard" className="text-goat-accent-solid text-sm font-bold">
+          ← Volver
+        </Link>
+        <Link
+          href={`/juego/jugador/${partida.jugadorId}/informe`}
+          target="_blank"
+          className="rounded-full bg-goat-accent-solid px-4 py-2 text-sm font-bold text-white"
+        >
+          Descargar informe ↗
+        </Link>
+      </div>
 
       <header>
         <h1 className="text-2xl font-extrabold">{partida.jugador.nombre}</h1>
