@@ -261,6 +261,16 @@ export interface ConsecuenciaGenerada {
 // strict:true no soporta minItems/maxItems distintos de 0 o 1 — la cantidad
 // exacta de 4 opciones se refuerza con la instrucción del description y con
 // validarOpciones() en tiempo de ejecución, no con el JSON Schema.
+// Tope de largo de las opciones (ver también EVENTO_SCHEMA.opciones más
+// abajo) — antes NO tenían ninguna guía de longitud (las de evento ni
+// siquiera tenían description), y en partidas reales el modelo terminaba
+// metiendo dos cláusulas, cifras y condiciones dentro del botón (ej.
+// "Creas un modelo híbrido: sesiones sueltas a $180.000, pero si se
+// comprometen a 12 sesiones, descienden a $140.000 cada una" — un jugador
+// en el celular no lee eso completo antes de decidir). Esos detalles van en
+// la narrativa de la consecuencia, no en el botón.
+const TOPE_LARGO_OPCION = "Máximo 8-10 palabras, UNA sola acción concreta y corta — nunca dos cláusulas separadas por 'pero'/'o'/una coma larga, ni cifras o condiciones extra (eso va en la narrativa de la consecuencia, no en el botón).";
+
 const OPCIONES_DECISION_SCHEMA = {
   type: "array",
   description: "Exactamente 4 opciones, una por cada letra A, B, C y D.",
@@ -270,7 +280,7 @@ const OPCIONES_DECISION_SCHEMA = {
     properties: {
       letra: { type: "string", enum: ["A", "B", "C", "D"] },
       emoji: { type: "string", description: "Un solo emoji representativo" },
-      titulo: { type: "string", description: "Título corto de la opción, en segunda persona con tuteo, nunca voseo (ej: 'Aceptas el trabajo', no 'Aceptás')" },
+      titulo: { type: "string", description: `Título de la opción, en segunda persona con tuteo, nunca voseo (ej: 'Aceptas el trabajo', no 'Aceptás'). ${TOPE_LARGO_OPCION}` },
     },
     required: ["letra", "emoji", "titulo"],
   },
@@ -281,7 +291,7 @@ const DECISION_SCHEMA = {
   additionalProperties: false,
   properties: {
     titulo: { type: "string" },
-    texto: { type: "string", description: "Máximo 2-3 líneas cortas de contexto narrativo antes de las opciones — el jugador lee esto en el celular, entre más corto mejor." },
+    texto: { type: "string", description: "Máximo 30 palabras (2 oraciones cortas, no más) de contexto narrativo antes de las opciones — el jugador lee esto en el celular y tiene que decidir rápido. Ve directo a la situación y la tensión, sin acumular antecedentes o detalles que no cambian la decisión — entre más corto mejor." },
     tiene_campo_libre: { type: "boolean" },
     texto_campo_libre: { type: "string", description: "Solo si tiene_campo_libre es true" },
     opciones: OPCIONES_DECISION_SCHEMA,
@@ -296,7 +306,7 @@ const EVENTO_SCHEMA = {
     tipo: { type: "string", enum: ["imprevisto", "oportunidad"] },
     nombre: { type: "string" },
     emoji: { type: "string" },
-    texto: { type: "string", description: "Máximo 2-3 líneas cortas de contexto narrativo antes de las opciones — el jugador lee esto en el celular, entre más corto mejor." },
+    texto: { type: "string", description: "Máximo 30 palabras (2 oraciones cortas, no más) de contexto narrativo antes de las opciones — el jugador lee esto en el celular y tiene que decidir rápido. Ve directo a la situación y la tensión, sin acumular antecedentes o detalles que no cambian la decisión — entre más corto mejor." },
     opciones: {
       type: "array",
       description: "Exactamente 4 opciones, una por cada letra A, B, C y D.",
@@ -306,7 +316,7 @@ const EVENTO_SCHEMA = {
         properties: {
           letra: { type: "string", enum: ["A", "B", "C", "D"] },
           emoji: { type: "string", description: "Un solo emoji representativo" },
-          texto: { type: "string" },
+          texto: { type: "string", description: TOPE_LARGO_OPCION },
         },
         required: ["letra", "emoji", "texto"],
       },
