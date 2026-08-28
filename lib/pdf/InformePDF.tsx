@@ -87,17 +87,9 @@ const styles = StyleSheet.create({
   caminoResultado: { fontWeight: 900, textTransform: "capitalize", color: SECUNDARIO },
   caminoMedallas: { fontSize: 8.5, opacity: 0.7, marginTop: 1 },
 
-  medalPills: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  medalPill: {
-    backgroundColor: "rgba(255,255,255,0.6)",
-    borderWidth: 1,
-    borderColor: "rgba(180,120,20,0.25)",
-    borderRadius: 999,
-    paddingHorizontal: 9,
-    paddingVertical: 3.5,
-    fontSize: 8.5,
-    fontWeight: 700,
-  },
+  medalItem: { marginBottom: 6 },
+  medalNombre: { fontSize: 9.5, fontWeight: 800 },
+  medalCondicion: { fontSize: 8.5, opacity: 0.65, marginTop: 1 },
   medalCount: { fontSize: 8.5, opacity: 0.6, marginTop: 6 },
 
   listItem: { flexDirection: "row", fontSize: 9.5, lineHeight: 1.5, marginBottom: 4 },
@@ -235,7 +227,15 @@ export interface InformePDFProps {
   partidas: PartidaResumenPDF[];
   patrones: { perfilesRepetidos: string[]; alertasComunes: string[]; skillsComunes: string[] };
   areasDeMejora: { alerta: string; vecesPresente: number }[];
-  mejoresDecisiones: { partidaId: string; anio: number; titulo: string; saltoIngreso: number; medallaDesbloqueada: string | null }[];
+  mejoresDecisiones: {
+    partidaId: string;
+    anio: number;
+    titulo: string;
+    saltoIngreso: number;
+    medallaDesbloqueada: string | null;
+    narrativa: string | null;
+  }[];
+  lecciones: { partidaId: string; anio: number; titulo: string; leccion: string }[];
   diferencias: string;
   sintesis: string;
   generadoEl: string;
@@ -248,6 +248,7 @@ export function InformePDF({
   patrones,
   areasDeMejora,
   mejoresDecisiones,
+  lecciones,
   diferencias,
   sintesis,
   generadoEl,
@@ -355,13 +356,12 @@ export function InformePDF({
         <View style={styles.body}>
           {medallasAcumuladas.length > 0 && (
             <Tarjeta titulo="Todas tus medallas">
-              <View style={styles.medalPills}>
-                {medallasAcumuladas.map((m) => (
-                  <Text key={m.id} style={styles.medalPill}>
-                    {limpiarTexto(m.nombre)}
-                  </Text>
-                ))}
-              </View>
+              {medallasAcumuladas.map((m) => (
+                <View key={m.id} style={styles.medalItem}>
+                  <Text style={styles.medalNombre}>{limpiarTexto(m.nombre)}</Text>
+                  <Text style={styles.medalCondicion}>{limpiarTexto(m.condicion)}</Text>
+                </View>
+              ))}
               <Text style={styles.medalCount}>
                 {medallasAcumuladas.length} medalla{medallasAcumuladas.length === 1 ? "" : "s"} distinta
                 {medallasAcumuladas.length === 1 ? "" : "s"} en {partidas.length} camino{partidas.length === 1 ? "" : "s"}
@@ -405,6 +405,21 @@ export function InformePDF({
                     <Text style={{ fontWeight: 800 }}>{limpiarTexto(d.titulo)}</Text> (año {d.anio})
                     {d.saltoIngreso > 0 ? ` — subió tu ingreso ${formatoPesos(d.saltoIngreso, pais)}` : ""}
                     {d.medallaDesbloqueada && ` · desbloqueó ${limpiarTexto(medalla(d.medallaDesbloqueada)?.nombre ?? d.medallaDesbloqueada)}`}
+                    {d.narrativa && `\n${limpiarTexto(d.narrativa)}`}
+                  </Text>
+                </View>
+              ))}
+            </Tarjeta>
+          )}
+
+          {lecciones.length > 0 && (
+            <Tarjeta titulo="Lecciones aprendidas">
+              {lecciones.map((l, i) => (
+                <View key={i} style={styles.listItem}>
+                  <Text style={[styles.bullet, styles.bulletDot]}>•</Text>
+                  <Text style={styles.listText}>
+                    <Text style={{ fontWeight: 800 }}>{limpiarTexto(l.titulo)}</Text> (año {l.anio})
+                    {`\n${limpiarTexto(l.leccion)}`}
                   </Text>
                 </View>
               ))}

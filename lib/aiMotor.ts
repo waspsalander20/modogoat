@@ -145,6 +145,8 @@ Ejemplo — decisión ética con recompensa de negocio (perfil Creador, mecánic
 REGLAS DE DETECCIÓN INVISIBLE (para tu análisis interno, nunca lo menciones al jugador)
 
 Perfil según decisiones: universidad tradicional → EMP+INV; emprender → EMP2; negociar siempre → más emprendedor; pedir consejo antes de decidir → más investigador/empleado; rechazar exclusividades → creador/freelancer; elegir la opción creativa/expresiva por sobre la práctica o la ya establecida, priorizar originalidad → más creador; preferir seguir un proceso o sistema ya establecido en vez de crear uno propio desde cero → más empleado; preferir terminar y entregar lo ya empezado, con un plan de respaldo, sobre lanzarse a algo incierto sin estructura → más empleado; tolerar no tener ingreso fijo con tal de mantener el control total de su proyecto, o invertir en capacitarse aunque nadie se lo pida → más emprendedor; elegir cobrar por un resultado o entregable cerrado en vez de por horas/disponibilidad, o preferir trabajar solo antes que armar un equipo → más freelancer; elegir documentar o compartir públicamente lo que aprende en vez de guardárselo, o preferir construir algo que se vende muchas veces sobre cobrar por horas → más creador de contenido.
+Magnitud de puntos_perfil (crítico) — es un DELTA de este turno, entre 0 y 10 por perfil (ver el schema). No repartas puntos parejos entre los 5 perfiles por costumbre: si esta decisión es claramente de un perfil (ej. comprar el negocio y contratar gente = EMP2 puro), dale la mayoría o todos los puntos a ESE perfil y deja los demás en 0 o casi 0 — no le des puntos altos a EMP solo porque "trabajar" suena a empleado, revisa qué acción concreta tomó el jugador. Nunca mires los valores de puntos_perfil que ves en el estado para decidir la magnitud de tu respuesta — ese es el acumulado histórico de toda la partida, tu número de este turno siempre vive en el rango 0-10 sin importar cuán grande sea ese acumulado.
+
 Barreras: elegir "esperar"/evasión repetidamente → ver regla 7c (barrera_evasion); rechazar todas las oportunidades → barrera de riesgo; elegir siempre lo gratuito → barrera económica; nunca activar mentores → barrera de aislamiento; campo libre "no sé" persistente → sin dirección vocacional.
 Señales de potencial: negociar en vez de aceptar → instinto empresarial; buscar información antes de decidir → perfil investigador; construir red activamente → liderazgo social; conectar mundos diferentes → pensamiento sistémico.
 
@@ -470,6 +472,55 @@ export async function generarEvento(
   return { ...evento, opciones: mezclarOpciones(evento.opciones) };
 }
 
+// Uso único: script de recalibración (scripts/recalcular-puntos.ts) para
+// partidas jugadas ANTES del fix de magnitud de puntos_perfil (27 ago
+// 2026, ver auditoría) — reclasifica una decisión ya tomada, sin volver a
+// generar narrativa/ingreso/skills, solo el puntaje de perfil con el
+// criterio corregido (0-10, delta de esa decisión únicamente).
+const RECLASIFICACION_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    puntos_perfil: {
+      type: "object",
+      additionalProperties: false,
+      description:
+        "DELTA de puntos que aporta ÚNICAMENTE esta decisión, entre 0 y 10 por perfil: el perfil que esta opción refleja con más fuerza se lleva la mayoría (7-10), uno relacionado puede llevarse algo (2-5), y los que no tienen nada que ver quedan en 0.",
+      properties: {
+        EMP: { type: "number" },
+        INV: { type: "number" },
+        EMP2: { type: "number" },
+        FREE: { type: "number" },
+        CRE: { type: "number" },
+      },
+      required: ["EMP", "INV", "EMP2", "FREE", "CRE"],
+    },
+  },
+  required: ["puntos_perfil"],
+};
+
+export async function reclasificarPuntosPerfil(
+  estado: EstadoIA,
+  decisionHistorica: { titulo: string; opcionTexto: string; narrativa: string | null },
+  registrarUso?: (uso: UsoIA) => void
+): Promise<Puntos> {
+  const raw = await llamarHerramienta<{ puntos_perfil: Puntos }>(
+    "reclasificar_puntos_perfil_historico",
+    estado,
+    "clasificar_puntos",
+    RECLASIFICACION_SCHEMA,
+    {
+      decision_tomada: decisionHistorica,
+      instruccion_adicional:
+        "Esta es una decisión de una partida vieja, YA TOMADA y YA RESUELTA — no generes narrativa nueva ni cambies nada de lo que pasó. Tu única tarea es clasificar, con el criterio de magnitud corregido (0-10 por perfil, ver la regla de puntos_perfil), qué perfil(es) refleja la opción que el jugador eligió (decision_tomada.opcionTexto), apoyándote en decision_tomada.narrativa para entender qué pasó.",
+    },
+    256,
+    registrarUso,
+    MODEL_RAPIDO
+  );
+  return raw.puntos_perfil;
+}
+
 const MENTORES_VALIDOS = ["andrea", "carlos", "valentina", "sebastian", "luna", "don_jairo"] as const;
 
 export async function procesarEleccion(
@@ -512,6 +563,8 @@ export async function procesarEleccion(
       puntos_perfil: {
         type: "object",
         additionalProperties: false,
+        description:
+          "DELTA de puntos que aporta ÚNICAMENTE esta decisión — no el acumulado. Cada valor va de 0 a 10: el perfil que esta opción refleja con más fuerza se lleva la mayoría (7-10), uno relacionado puede llevarse algo (2-5), y los que no tienen nada que ver quedan en 0. Ignora por completo puntos_perfil en el estado (ese es el acumulado de toda la partida, no una referencia de escala para este número).",
         properties: {
           EMP: { type: "number" },
           INV: { type: "number" },
@@ -682,7 +735,7 @@ export async function generarAnalisisFinal(
       narrativa: {
         type: "string",
         description:
-          `Markdown completo con: título con el nombre del jugador, cierre narrativo de la historia (2-3 párrafos cortos, cinematográfico, sin jerga técnica — esto también se lee en el celular, no te extiendas), el patrón más importante de su perfil, y una frase de cierre de 2-3 líneas que resuma quién es. Incluye también una reflexión breve y genuina (1-2 líneas, no un sermón) de que la felicidad y la plenitud con el camino elegido es el indicador de éxito más real que existe — más que el ingreso — sin importar en qué resultado haya quedado esta partida.${estado.feliz_final === true ? " Este jugador SÍ respondió que está en paz con su camino — que esa respuesta sea parte visible de por qué esta historia se siente como un logro de verdad, no solo el ingreso." : estado.feliz_final === false ? " Este jugador respondió que siente que algo quedó pendiente o que sacrificó algo importante — trátalo con honestidad y calidez, nunca como un fracaso: es información real sobre su camino, igual de válida que un buen ingreso, y el cierre debe reconocerlo sin ser un sermón ni un consejo no pedido." : ""}${construirNotaResultadoFinal(estado.resultado_tipo)} NO menciones CHASIDE, Big Five, MMMG, VAK ni la palabra 'perfil vocacional' — esto lo lee el jugador, no un panel administrativo.`,
+          `Markdown completo con: título con el nombre del jugador, cierre narrativo de la historia (2-3 párrafos cortos, cinematográfico, sin jerga técnica — esto también se lee en el celular, no te extiendas), el patrón más importante de su perfil, y una frase de cierre de 2-3 líneas que resuma quién es. Si historial_decisiones muestra que el jugador cambió de MODO de trabajo a lo largo de la partida (ej. empezó de empleado en una empresa, luego pasó a trabajar por su cuenta como freelancer, y terminó siendo dueño de un negocio con gente a su cargo — o cualquier otra combinación real de esos cambios), nombra ese recorrido explícitamente en 1-2 líneas (ej. "empezaste como empleada, después te independizaste, y terminaste construyendo tu propio negocio") — es información real y valiosa sobre cómo llegó a donde llegó, no la des por sentada solo porque el perfil dominante final ya la resume. Incluye también una reflexión breve y genuina (1-2 líneas, no un sermón) de que la felicidad y la plenitud con el camino elegido es el indicador de éxito más real que existe — más que el ingreso — sin importar en qué resultado haya quedado esta partida.${estado.feliz_final === true ? " Este jugador SÍ respondió que está en paz con su camino — que esa respuesta sea parte visible de por qué esta historia se siente como un logro de verdad, no solo el ingreso." : estado.feliz_final === false ? " Este jugador respondió que siente que algo quedó pendiente o que sacrificó algo importante — trátalo con honestidad y calidez, nunca como un fracaso: es información real sobre su camino, igual de válida que un buen ingreso, y el cierre debe reconocerlo sin ser un sermón ni un consejo no pedido." : ""}${construirNotaResultadoFinal(estado.resultado_tipo)} NO menciones CHASIDE, Big Five, MMMG, VAK ni la palabra 'perfil vocacional' — esto lo lee el jugador, no un panel administrativo.`,
       },
     },
     required: ["narrativa"],

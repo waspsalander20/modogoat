@@ -17,6 +17,11 @@ export interface DecisionResumen {
   ingresoAntes: number;
   ingresoDespues: number;
   medallaDesbloqueada: string | null;
+  // Ya generados por la IA en el momento (ver costo_oportunidad y narrativa
+  // en aiMotor.ts) — se reusan acá para "lecciones aprendidas" y para
+  // explicar POR QUÉ la mejor decisión ayudó, sin volver a llamar a la IA.
+  costoOportunidad: string | null;
+  narrativa: string | null;
 }
 
 export interface PartidaParaComparar {
@@ -47,6 +52,16 @@ export interface MejorDecision {
   titulo: string;
   saltoIngreso: number;
   medallaDesbloqueada: string | null;
+  // Por qué ayudó — reusa la narrativa ya generada para esa consecuencia,
+  // no un texto nuevo.
+  narrativa: string | null;
+}
+
+export interface Leccion {
+  partidaId: string;
+  anio: number;
+  titulo: string;
+  leccion: string;
 }
 
 function contarApariciones(listas: string[][]): Map<string, number> {
@@ -109,8 +124,27 @@ export function encontrarMejoresDecisiones(partidas: PartidaParaComparar[]): Mej
         titulo: mejor.titulo,
         saltoIngreso: mejor.salto,
         medallaDesbloqueada: mejor.medallaDesbloqueada,
+        narrativa: mejor.narrativa,
       });
     }
   }
   return mejores;
+}
+
+// costo_oportunidad ya viene escrito por la IA en el momento (dos oraciones:
+// qué se perdió y qué hacer distinto la próxima vez, ver aiMotor.ts) — esto
+// solo lo recolecta, no genera texto nuevo. Tope por partida para que un
+// camino largo con muchos tropiezos no ahogue el informe.
+const MAX_LECCIONES_POR_PARTIDA = 3;
+
+export function extraerLecciones(partidas: PartidaParaComparar[]): Leccion[] {
+  const lecciones: Leccion[] = [];
+  for (const partida of partidas) {
+    const conLeccion = partida.decisiones
+      .filter((d) => d.costoOportunidad)
+      .slice(0, MAX_LECCIONES_POR_PARTIDA)
+      .map((d) => ({ partidaId: partida.id, anio: d.anio, titulo: d.titulo, leccion: d.costoOportunidad! }));
+    lecciones.push(...conLeccion);
+  }
+  return lecciones;
 }

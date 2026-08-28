@@ -26,6 +26,7 @@ import {
   calcularPatronesComparativos,
   calcularAreasDeMejora,
   encontrarMejoresDecisiones,
+  extraerLecciones,
   type PartidaParaComparar,
 } from "./lib/informeComparativo";
 import { partidasEsperadas, DEFAULT_PARTIDAS_POR_PAQUETE } from "./lib/data/paquete";
@@ -121,6 +122,16 @@ caso("sumarPuntos: no revienta si la IA devuelve puntos incompletos o undefined"
 
   const undefinedTotal = sumarPuntos(actuales, undefined);
   assert.equal(undefinedTotal.EMP, 10, "undefined completo en nuevos no debe romper ni sumar nada");
+});
+caso("sumarPuntos: clampea cada delta a [0,10] — bug real visto en producción (deltas creciendo hasta millones)", () => {
+  const resultado = sumarPuntos(
+    { EMP: 100, INV: 100, EMP2: 100, FREE: 100, CRE: 100 },
+    { EMP: 2_422_826, INV: -50, EMP2: 8, FREE: 0, CRE: 15 }
+  );
+  assert.equal(resultado.EMP, 110, "un delta gigante de un solo turno no puede inflar el acumulado — se clampea a 10");
+  assert.equal(resultado.INV, 100, "un delta negativo se clampea a 0, no resta");
+  assert.equal(resultado.EMP2, 108, "un delta dentro de rango pasa sin cambios");
+  assert.equal(resultado.CRE, 110, "un delta que excede el tope por poco también se clampea a 10");
 });
 
 // --- calcularSalarioProyectado ---
@@ -680,13 +691,13 @@ caso("encontrarMejoresDecisiones: el mayor salto de ingreso por partida, o la qu
     partidaComparar({
       id: "a",
       decisiones: [
-        { anio: 18, titulo: "Primer cliente", ingresoAntes: 0, ingresoDespues: 500_000, medallaDesbloqueada: null },
-        { anio: 20, titulo: "Contrato grande", ingresoAntes: 500_000, ingresoDespues: 3_000_000, medallaDesbloqueada: null },
+        { anio: 18, titulo: "Primer cliente", ingresoAntes: 0, ingresoDespues: 500_000, medallaDesbloqueada: null, costoOportunidad: null, narrativa: null },
+        { anio: 20, titulo: "Contrato grande", ingresoAntes: 500_000, ingresoDespues: 3_000_000, medallaDesbloqueada: null, costoOportunidad: null, narrativa: null },
       ],
     }),
     partidaComparar({
       id: "b",
-      decisiones: [{ anio: 19, titulo: "Certificación", ingresoAntes: 1_000_000, ingresoDespues: 1_000_000, medallaDesbloqueada: "bilingue" }],
+      decisiones: [{ anio: 19, titulo: "Certificación", ingresoAntes: 1_000_000, ingresoDespues: 1_000_000, medallaDesbloqueada: "bilingue", costoOportunidad: null, narrativa: null }],
     }),
     partidaComparar({ id: "c", decisiones: [] }),
   ];
@@ -694,6 +705,24 @@ caso("encontrarMejoresDecisiones: el mayor salto de ingreso por partida, o la qu
   assert.equal(mejores.length, 2, "la partida sin decisiones no aporta ninguna");
   assert.equal(mejores[0].titulo, "Contrato grande", "el mayor salto de ingreso de la partida a");
   assert.equal(mejores[1].medallaDesbloqueada, "bilingue", "sin salto de ingreso, se usa la que desbloqueó medalla");
+});
+caso("extraerLecciones: recolecta costoOportunidad ya generado, sin inventar texto nuevo, con tope por partida", () => {
+  const partidas = [
+    partidaComparar({
+      id: "a",
+      decisiones: [
+        { anio: 20, titulo: "Bajó el precio", ingresoAntes: 0, ingresoDespues: 0, medallaDesbloqueada: null, costoOportunidad: "Perdiste margen por bajar precio primero.", narrativa: null },
+        { anio: 21, titulo: "Todo bien", ingresoAntes: 0, ingresoDespues: 0, medallaDesbloqueada: null, costoOportunidad: null, narrativa: null },
+        { anio: 22, titulo: "Otro tropiezo", ingresoAntes: 0, ingresoDespues: 0, medallaDesbloqueada: null, costoOportunidad: "Segundo tropiezo.", narrativa: null },
+        { anio: 23, titulo: "Tercer tropiezo", ingresoAntes: 0, ingresoDespues: 0, medallaDesbloqueada: null, costoOportunidad: "Tercer tropiezo.", narrativa: null },
+        { anio: 24, titulo: "Cuarto tropiezo", ingresoAntes: 0, ingresoDespues: 0, medallaDesbloqueada: null, costoOportunidad: "Cuarto tropiezo — no debería aparecer.", narrativa: null },
+      ],
+    }),
+  ];
+  const lecciones = extraerLecciones(partidas);
+  assert.equal(lecciones.length, 3, "tope de 3 lecciones por partida");
+  assert.equal(lecciones[0].leccion, "Perdiste margen por bajar precio primero.");
+  assert.ok(!lecciones.some((l) => l.titulo === "Cuarto tropiezo"), "no debe pasar del tope");
 });
 
 console.log(`\n${pasadas} casos pasaron.`);

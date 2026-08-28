@@ -37,11 +37,19 @@ interface MejorDecision {
   titulo: string;
   saltoIngreso: number;
   medallaDesbloqueada: string | null;
+  narrativa: string | null;
 }
 
 interface AreaDeMejora {
   alerta: string;
   vecesPresente: number;
+}
+
+interface Leccion {
+  partidaId: string;
+  anio: number;
+  titulo: string;
+  leccion: string;
 }
 
 interface ResultadoAnalisis {
@@ -51,6 +59,7 @@ interface ResultadoAnalisis {
   patrones: { perfilesRepetidos: string[]; alertasComunes: string[]; skillsComunes: string[] };
   areasDeMejora: AreaDeMejora[];
   mejoresDecisiones: MejorDecision[];
+  lecciones: Leccion[];
   diferencias: string;
   sintesis: string;
 }
@@ -236,19 +245,20 @@ export default function InformeComparativoClient({ jugadorId }: { jugadorId: str
 
       {medallasAcumuladas.length > 0 && (
         <Tarjeta titulo="Todas tus medallas">
-          <div className="flex flex-wrap gap-2">
+          <ul className="flex flex-col gap-2">
             {medallasAcumuladas.map((m) => (
-              <span
-                key={m.id}
-                className="flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold"
-                style={{ background: "rgba(255,255,255,0.5)", color: "var(--resultado-ink)" }}
-                title={m.condicion}
-              >
-                {m.emoji} {m.nombre}
-              </span>
+              <li key={m.id} className="flex items-start gap-2 text-sm" style={{ color: "var(--resultado-ink)" }}>
+                <span className="text-base leading-none">{m.emoji}</span>
+                <span>
+                  <strong>{m.nombre}</strong>
+                  <span className="block text-xs" style={{ opacity: 0.65 }}>
+                    {m.condicion}
+                  </span>
+                </span>
+              </li>
             ))}
-          </div>
-          <p className="mt-2 text-xs" style={{ color: "var(--resultado-ink)", opacity: 0.6 }}>
+          </ul>
+          <p className="mt-3 text-xs" style={{ color: "var(--resultado-ink)", opacity: 0.6 }}>
             {medallasAcumuladas.length} medalla{medallasAcumuladas.length === 1 ? "" : "s"} distinta
             {medallasAcumuladas.length === 1 ? "" : "s"} en {datos.partidas.length} camino
             {datos.partidas.length === 1 ? "" : "s"}
@@ -299,12 +309,34 @@ export default function InformeComparativoClient({ jugadorId }: { jugadorId: str
 
       {datos.mejoresDecisiones.length > 0 && (
         <Tarjeta titulo="Decisiones que más te ayudaron">
-          <ul className="flex flex-col gap-2 text-sm" style={{ color: "var(--resultado-ink)" }}>
+          <ul className="flex flex-col gap-3 text-sm" style={{ color: "var(--resultado-ink)" }}>
             {datos.mejoresDecisiones.map((d, i) => (
               <li key={i}>
                 <strong>{d.titulo}</strong> (año {d.anio})
                 {d.saltoIngreso > 0 ? ` — subió tu ingreso ${formatoPesos(d.saltoIngreso)}` : ""}
                 {d.medallaDesbloqueada && ` · desbloqueó ${medalla(d.medallaDesbloqueada)?.nombre ?? d.medallaDesbloqueada}`}
+                {d.narrativa && (
+                  <span className="mt-0.5 block text-xs" style={{ opacity: 0.7 }}>
+                    {d.narrativa}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Tarjeta>
+      )}
+
+      {datos.lecciones.length > 0 && (
+        <Tarjeta titulo="Lecciones aprendidas">
+          <ul className="flex flex-col gap-3 text-sm" style={{ color: "var(--resultado-ink)" }}>
+            {datos.lecciones.map((l, i) => (
+              <li key={i}>
+                <strong>
+                  {l.titulo} (año {l.anio})
+                </strong>
+                <span className="mt-0.5 block text-xs" style={{ opacity: 0.7 }}>
+                  {l.leccion}
+                </span>
               </li>
             ))}
           </ul>

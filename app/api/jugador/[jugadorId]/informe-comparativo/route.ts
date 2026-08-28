@@ -5,6 +5,7 @@ import {
   calcularPatronesComparativos,
   calcularAreasDeMejora,
   encontrarMejoresDecisiones,
+  extraerLecciones,
   type PartidaParaComparar,
 } from "@/lib/informeComparativo";
 import { generarAnalisisComparativo, type PartidaParaAnalisisComparativo } from "@/lib/aiMotor";
@@ -74,12 +75,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       ingresoAntes: d.ingresoAntes ?? 0,
       ingresoDespues: d.ingresoDespues ?? 0,
       medallaDesbloqueada: d.medallaDesbloqueada,
+      costoOportunidad: d.costoOportunidad,
+      narrativa: d.narrativa,
     })),
   }));
 
   const patrones = calcularPatronesComparativos(partidasParaComparar);
   const areasDeMejora = calcularAreasDeMejora(partidasParaComparar);
   const mejoresDecisiones = encontrarMejoresDecisiones(partidasParaComparar);
+  const lecciones = extraerLecciones(partidasParaComparar);
 
   const partidasParaIA: PartidaParaAnalisisComparativo[] = partidasParaComparar.map((p, i) => ({
     numero: i + 1,
@@ -119,6 +123,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     patrones,
     areasDeMejora,
     mejoresDecisiones,
+    lecciones,
     diferencias: analisis.diferencias,
     sintesis: analisis.sintesis,
   });

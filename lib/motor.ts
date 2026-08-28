@@ -78,6 +78,21 @@ export function aplicarSkills(
   return resultado;
 }
 
+// Tope defensivo del delta que aporta UN turno — el prompt le pide a la IA
+// un rango 0-10 (ver puntos_perfil en aiMotor.ts), pero el schema de
+// Anthropic no soporta minimum/maximum en tools custom, así que no hay
+// enforcement del lado de la API. Sin este clamp, un turno donde el modelo
+// se desvía puede inflar el acumulado de la partida entera (bug real visto
+// en producción: deltas creciendo ~8x por turno hasta llegar a millones,
+// lo que dejaba el perfil dominante decidido por un solo turno corrupto en
+// vez de por el patrón real de decisiones — ver auditoría 27 ago 2026).
+const MAX_DELTA_PUNTOS_POR_TURNO = 10;
+
+function clampDeltaPuntos(valor: number | undefined): number {
+  if (typeof valor !== "number" || !Number.isFinite(valor)) return 0;
+  return Math.max(0, Math.min(MAX_DELTA_PUNTOS_POR_TURNO, valor));
+}
+
 // Defensivo en ambos lados: `nuevos` viene de la IA y, pese a strict:true en
 // el schema, ocasionalmente llega incompleto o el objeto entero viene
 // undefined — sin esto, sumarPuntos revienta con un 500 sin manejar, el
@@ -88,11 +103,11 @@ export function sumarPuntos(actuales: Puntos | null | undefined, nuevos: Puntos 
   const a = actuales ?? ({} as Partial<Puntos>);
   const n = nuevos ?? ({} as Partial<Puntos>);
   return {
-    EMP: (a.EMP ?? 0) + (n.EMP ?? 0),
-    INV: (a.INV ?? 0) + (n.INV ?? 0),
-    EMP2: (a.EMP2 ?? 0) + (n.EMP2 ?? 0),
-    FREE: (a.FREE ?? 0) + (n.FREE ?? 0),
-    CRE: (a.CRE ?? 0) + (n.CRE ?? 0),
+    EMP: (a.EMP ?? 0) + clampDeltaPuntos(n.EMP),
+    INV: (a.INV ?? 0) + clampDeltaPuntos(n.INV),
+    EMP2: (a.EMP2 ?? 0) + clampDeltaPuntos(n.EMP2),
+    FREE: (a.FREE ?? 0) + clampDeltaPuntos(n.FREE),
+    CRE: (a.CRE ?? 0) + clampDeltaPuntos(n.CRE),
   };
 }
 

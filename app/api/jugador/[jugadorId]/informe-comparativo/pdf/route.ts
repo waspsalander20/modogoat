@@ -9,7 +9,15 @@ interface PdfBody {
   partidas: PartidaResumenPDF[];
   patrones: { perfilesRepetidos: string[]; alertasComunes: string[]; skillsComunes: string[] };
   areasDeMejora: { alerta: string; vecesPresente: number }[];
-  mejoresDecisiones: { partidaId: string; anio: number; titulo: string; saltoIngreso: number; medallaDesbloqueada: string | null }[];
+  mejoresDecisiones: {
+    partidaId: string;
+    anio: number;
+    titulo: string;
+    saltoIngreso: number;
+    medallaDesbloqueada: string | null;
+    narrativa: string | null;
+  }[];
+  lecciones: { partidaId: string; anio: number; titulo: string; leccion: string }[];
   diferencias: string;
   sintesis: string;
 }
@@ -40,6 +48,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       patrones: body.patrones,
       areasDeMejora: body.areasDeMejora,
       mejoresDecisiones: body.mejoresDecisiones,
+      lecciones: body.lecciones ?? [],
       diferencias: body.diferencias,
       sintesis: body.sintesis,
       generadoEl: new Date().toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" }),
